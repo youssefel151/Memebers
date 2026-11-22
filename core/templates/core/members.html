@@ -1,0 +1,20 @@
+{% extends 'core/base.html' %}
+{% block title %}Members{% endblock %}
+{% block body %}
+<main class="page roster-page">
+  <header class="roster-header"><div><span class="eyebrow">Community roster</span><h1>Members</h1></div><a class="button" href="/members/add/">Add member +</a></header>
+  <form method="get" class="roster-search" role="search"><label class="hp" for="members-search">Search members</label><input id="members-search" type="search" name="q" value="{{ query }}" placeholder="Search name or email"><button class="button button-small" type="submit">Search</button>{% if query %}<a href="/members/">Clear</a>{% endif %}</form>
+  <p class="roster-count">{{ members.paginator.count }} member{{ members.paginator.count|pluralize }}</p>
+  <section class="roster-list" aria-label="Members">
+    {% for m in members %}
+      <article class="card roster-card">
+        <div class="roster-row"><div><strong>{{ m.user.get_full_name|default:m.user.username }}</strong><div class="muted">{{ m.user.email|default:m.user.username }}</div></div><div class="roster-actions"><a href="/qr/{{ m.qr_token }}/">View QR</a>{% if not m.user.is_superuser and m.user_id != user.id %}<a class="roster-remove" href="/members/{{ m.id }}/remove/">Remove</a>{% endif %}</div></div>
+        {% if capabilities.can_manage_permissions and not m.user.is_superuser and m.user_id != user.id %}
+          <details class="roster-access"><summary>Permissions</summary><form method="post" action="/members/" class="roster-permission-form">{% csrf_token %}<input type="hidden" name="member_id" value="{{ m.id }}"><div class="roster-permission-grid">{% for field in m.permissions_form %}<label>{{ field }} {{ field.label }}</label>{% endfor %}</div><button class="button button-small" type="submit">Save permissions</button></form></details>
+        {% endif %}
+      </article>
+    {% empty %}<div class="empty">{% if query %}No members match that search.{% else %}No members have been added yet.{% endif %}</div>{% endfor %}
+  </section>
+  {% if members.paginator.num_pages > 1 %}<nav class="roster-pagination" aria-label="Member pages">{% if members.has_previous %}<a href="?q={{ query|urlencode }}&amp;page={{ members.previous_page_number }}">← Previous</a>{% else %}<span></span>{% endif %}<span>Page {{ members.number }} of {{ members.paginator.num_pages }}</span>{% if members.has_next %}<a href="?q={{ query|urlencode }}&amp;page={{ members.next_page_number }}">Next →</a>{% else %}<span></span>{% endif %}</nav>{% endif %}
+</main>
+{% endblock %}

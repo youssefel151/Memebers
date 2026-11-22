@@ -1,0 +1,52 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Event desk{% endblock %}
+
+{% block body %}
+
+<main class="page">
+
+  <div class="row-card">
+
+    <div><span class="eyebrow">Plan and publish</span><h1>Event desk</h1><p class="lede">Create events, control public registration, and share guest links.</p></div>
+
+    <a class="button" href="/events/new/">Create event&nbsp; +</a>
+
+  </div>
+
+  <div class="stack" style="margin-top:26px">
+
+    {% for row in event_rows %}
+
+      <article class="card event-management-card">
+
+        <div class="row-card">
+
+          <div><div class="guest-status"><span class="badge">{{ row.event.date|date:"d M Y · H:i" }}</span><span class="badge {% if row.event.registration_open %}badge-approved{% else %}badge-pending{% endif %}">{% if row.event.registration_open %}Registration open{% else %}Registration closed{% endif %}</span></div><h2 style="margin:12px 0 4px">{{ row.event.title }}</h2>{% if row.event.description %}<p>{{ row.event.description|truncatechars:160 }}</p>{% endif %}{% if row.event.place %}<p class="meta" style="margin:0">⌖ &nbsp;{{ row.event.place }}</p>{% endif %}</div>
+
+          <div class="toolbar event-actions"><a class="button button-outline button-small" href="/events/{{ row.event.id }}/report/">Attendees · {{ row.rsvp_count }} RSVPs / {{ row.attendance_count }} checked in</a>
+
+            <a class="button button-outline button-small" href="/events/{{ row.event.id }}/edit/">Edit event</a><a class="button button-outline button-small" href="/events/{{ row.event.id }}/delete/">Delete event</a>
+
+            <form method="post" action="/events/">{% csrf_token %}<input type="hidden" name="event_id" value="{{ row.event.id }}"><button class="button button-small {% if row.event.registration_open %}button-outline{% endif %}" type="submit" name="action" value="toggle_registration">{% if row.event.registration_open %}Pause registration{% else %}Open registration{% endif %}</button></form>
+
+          </div>
+
+        </div>
+
+        {% if row.event.registration_open %}<div class="share-line"><span><strong>Public guest link</strong><code>{{ row.share_url }}</code></span><a class="admin-link" href="{{ row.share_url }}" target="_blank" rel="noopener">Open link ↗</a></div>{% else %}<p class="meta" style="margin:18px 0 0">Registration is closed. Open it to publish a guest registration link.</p>{% endif %}
+
+      </article>
+
+    {% empty %}
+
+      <div class="empty">No events yet. Create an event to start accepting guest requests.</div>
+
+    {% endfor %}
+
+  </div>
+
+</main>
+
+{% endblock %}
+

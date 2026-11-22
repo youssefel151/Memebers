@@ -1,0 +1,23 @@
+{% extends 'core/base.html' %}
+{% block title %}{% if event %}Edit event{% else %}Create event{% endif %}{% endblock %}
+{% block body %}
+<main class="page page-narrow">
+  <a class="admin-link" href="/events/">← Event desk</a>
+  <section class="card form-card" style="margin-top:18px">
+    <span class="eyebrow">Event details</span>
+    <h1>{% if event %}Edit event{% else %}Create an event{% endif %}</h1>
+    <p class="muted">Set the event details, capacity, and registration availability.</p>
+    {% if form.non_field_errors %}<div class="notice notice-error">{{ form.non_field_errors }}</div>{% endif %}
+    <form method="post">{% csrf_token %}
+      {% for field in form %}
+        <div class="field">
+          {% if field.name == "registration_open" %}<label class="checkbox-field">{{ field }} <span>Open guest registration to the public</span></label>
+          {% else %}<label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% endif %}
+          {% for error in field.errors %}<div class="notice notice-error">{{ error }}</div>{% endfor %}
+        </div>
+      {% endfor %}
+      <button class="button" type="submit">Save event</button>
+    </form>
+  </section>
+</main>
+{% endblock %}

@@ -1,0 +1,43 @@
+{% extends 'core/base.html' %}
+{% block title %}Guest requests{% endblock %}
+{% block body %}
+<main class="page">
+  <span class="eyebrow">Registration desk</span>
+  <h1>Guest requests</h1>
+  <p class="lede">Review guest requests and check attendance by event.</p>
+  <form method="get" class="toolbar" role="search" style="margin-top:24px">
+    <label class="hp" for="guest-query">Search guest requests</label>
+    <input id="guest-query" type="search" name="q" value="{{ query }}" placeholder="Search name, email, phone">
+    <select name="event" aria-label="Filter by event"><option value="">All events</option>{% for e in events %}<option value="{{ e.id }}" {% if event_filter == e.id|stringformat:"s" %}selected{% endif %}>{{ e.title }}</option>{% endfor %}</select>
+    <select name="status" aria-label="Filter by status"><option value="">All statuses</option><option value="pending" {% if status_filter == "pending" %}selected{% endif %}>Pending</option><option value="approved" {% if status_filter == "approved" %}selected{% endif %}>Approved</option><option value="rejected" {% if status_filter == "rejected" %}selected{% endif %}>Declined</option></select>
+    <button class="button" type="submit">Filter</button><a class="button button-outline" href="/guests/">Clear</a>
+  </form>
+  <div class="stack" style="margin-top:24px">
+    {% for group in event_groups %}
+      <section class="guest-event-group">
+        <header class="card guest-event-heading">
+          <div><span class="eyebrow">{{ group.event.date|date:"d M Y · H:i" }}</span><h2>{{ group.event.title }}</h2>{% if group.event.place %}<p class="meta">{{ group.event.place }}</p>{% endif %}</div>
+          <div class="guest-event-counts"><span class="badge">{{ group.total }} request{{ group.total|pluralize }}</span><span class="badge badge-approved">{{ group.approved }} approved</span><span class="badge badge-approved">{{ group.checked_in }} checked in</span></div>
+        </header>
+        <div class="stack guest-event-list">
+          {% for row in group.rows %}
+            <article class="card guest-card">
+              <div class="row-card">
+                <div class="person"><div class="avatar">{{ row.guest.name|slice:":1"|upper }}</div><div><h3>{{ row.guest.name }}</h3><p>{{ row.guest.email|default:"No email" }}{% if row.guest.phone %} · {{ row.guest.phone }}{% endif %}</p></div></div>
+                <div class="guest-status"><span class="badge badge-{{ row.guest.status }}">{{ row.guest.get_status_display }}</span>{% if row.guest.checked_in_at %}<span class="badge badge-approved">Checked in · {{ row.guest.checked_in_at|date:"H:i" }}</span>{% elif row.guest.status == "approved" %}<span class="badge">Not checked in</span>{% endif %}</div>
+              </div>
+              <div class="guest-actions">
+                {% if row.guest.status == "pending" or row.guest.status == "rejected" %}<form method="post" action="/guests/">{% csrf_token %}<input type="hidden" name="guest_id" value="{{ row.guest.id }}"><button class="button button-small" type="submit" name="action" value="approve">Approve guest</button></form>{% endif %}
+                {% if row.guest.status == "pending" or row.guest.status == "approved" %}<form method="post" action="/guests/">{% csrf_token %}<input type="hidden" name="guest_id" value="{{ row.guest.id }}"><button class="button button-outline button-small" type="submit" name="action" value="reject">{% if row.guest.status == "approved" %}Revoke approval{% else %}Decline{% endif %}</button></form>{% endif %}
+                {% if row.link %}<a class="admin-link" href="{{ row.link }}">Open invitation ↗</a>{% endif %}
+                {% if row.mailto %}<a class="admin-link" href="{{ row.mailto }}">Prepare email ↗</a>{% endif %}
+              </div>
+            </article>
+          {% endfor %}
+        </div>
+        {% if group.page.paginator.num_pages > 1 %}<nav class="toolbar" aria-label="{{ group.event.title }} guest pages" style="justify-content:center;margin-top:14px"><span class="meta">Page {{ group.page.number }} of {{ group.page.paginator.num_pages }}</span>{% if group.page.has_previous %}<a class="button button-outline button-small" href="?q={{ query|urlencode }}&amp;status={{ status_filter|urlencode }}&amp;event={{ event_filter|urlencode }}&amp;page_{{ group.event.id }}={{ group.page.previous_page_number }}">Previous</a>{% endif %}{% if group.page.has_next %}<a class="button button-outline button-small" href="?q={{ query|urlencode }}&amp;status={{ status_filter|urlencode }}&amp;event={{ event_filter|urlencode }}&amp;page_{{ group.event.id }}={{ group.page.next_page_number }}">Next</a>{% endif %}</nav>{% endif %}
+      </section>
+    {% empty %}<div class="empty">No guest requests match these filters.</div>{% endfor %}
+  </div>
+</main>
+{% endblock %}
