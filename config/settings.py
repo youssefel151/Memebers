@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/6.1/ref/settings/
 from pathlib import Path
 import os
 from django.core.exceptions import ImproperlyConfigured
+import dj_database_url
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -28,7 +29,13 @@ SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'dev-only-change-me-before-depl
 ALLOWED_HOSTS = [host.strip() for host in os.environ.get('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',') if host.strip()]
 if not DEBUG and (SECRET_KEY == 'dev-only-change-me-before-deploy' or not ALLOWED_HOSTS):
     raise ImproperlyConfigured('Set DJANGO_SECRET_KEY and DJANGO_ALLOWED_HOSTS when DJANGO_DEBUG is false.')
-
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip()
+    for origin in os.environ.get(
+        'DJANGO_CSRF_TRUSTED_ORIGINS', ''
+    ).split(',')
+    if origin.strip()
+]
 
 # Application definition
 
@@ -44,6 +51,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -76,20 +84,28 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.1/ref/settings/#databases
 
-DATABASE_ENGINE = os.environ.get('DJANGO_DATABASE_ENGINE', 'django.db.backends.sqlite3')
-DATABASES = {
-    'default': {
-        'ENGINE': DATABASE_ENGINE,
-        'NAME': os.environ.get('DJANGO_DATABASE_NAME', str(BASE_DIR / 'db.sqlite3')),
-        'USER': os.environ.get('DJANGO_DATABASE_USER', ''),
-        'PASSWORD': os.environ.get('DJANGO_DATABASE_PASSWORD', ''),
-        'HOST': os.environ.get('DJANGO_DATABASE_HOST', ''),
-        'PORT': os.environ.get('DJANGO_DATABASE_PORT', ''),
-    }
-}
-if not DEBUG and DATABASE_ENGINE.endswith('sqlite3'):
-    raise ImproperlyConfigured('Configure a production database with DJANGO_DATABASE_ENGINE and connection settings.')
+DATABASE_URL = os.environ.get('DATABASE_URL')
 
+if DATABASE_URL:
+    DATABASES = {
+        'default': dj_database_url.parse(
+            DATABASE_URL,
+            conn_max_age=600,
+            ssl_require=not DEBUG,
+        )
+    }
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
+
+if not DEBUG and DATABASES['default']['ENGINE'].endswith('sqlite3'):
+    raise ImproperlyConfigured(
+        'Configure PostgreSQL using DATABASE_URL.'
+    )
 
 # Password validation
 # https://docs.djangoproject.com/en/6.1/ref/settings/#auth-password-validators
@@ -125,7 +141,17 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.1/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+STORAGES = {
+    'default': {
+        'BACKEND': 'django.core.files.storage.FileSystemStorage',
+    },
+    'staticfiles': {
+        'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
+    },
+}
 
 
 # Email
