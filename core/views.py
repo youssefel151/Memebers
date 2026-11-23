@@ -49,9 +49,7 @@ def _safe_csv_cell(value):
 
 def landing(request):
     now = timezone.now()
-    upcoming = Event.objects.filter(
-        registration_open=True, date__gte=now
-    ).order_by("date")[:3]
+    upcoming = Event.objects.filter(registration_open=True, date__gte=now).order_by("date")[:3]
     return render(request, "core/landing.html", {"upcoming": upcoming, "member_count": Member.objects.count(), "upcoming_count": Event.objects.filter(date__gte=now).count(), "open_registration_count": Event.objects.filter(date__gte=now, registration_open=True).count()})
 
 

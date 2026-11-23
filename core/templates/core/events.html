@@ -22,7 +22,7 @@
 
         <div class="row-card">
 
-          <div><div class="guest-status"><span class="badge">{{ row.event.date|date:"d M Y · H:i" }}</span><span class="badge {% if row.event.registration_open %}badge-approved{% else %}badge-pending{% endif %}">{% if row.event.registration_open %}Registration open{% else %}Registration closed{% endif %}</span></div><h2 style="margin:12px 0 4px">{{ row.event.title }}</h2>{% if row.event.description %}<p>{{ row.event.description|truncatechars:160 }}</p>{% endif %}{% if row.event.place %}<p class="meta" style="margin:0">⌖ &nbsp;{{ row.event.place }}</p>{% endif %}</div>
+          <div><div class="guest-status"><span class="badge">{{ row.event.date|date:"d M Y · H:i" }}</span><span class="badge {% if row.event.registration_open %}badge-approved{% else %}badge-pending{% endif %}">{% if row.event.registration_open %}Registration open{% else %}Registration closed{% endif %}</span></div><h2 style="margin:12px 0 4px">{{ row.event.title }}</h2>{% if row.event.description %}<p>{{ row.event.description|truncatechars:160 }}</p>{% endif %}{% if row.event.place %}<p class="meta" style="margin:0">Location:  &nbsp;{{ row.event.place }}</p>{% endif %}</div>
 
           <div class="toolbar event-actions"><a class="button button-outline button-small" href="/events/{{ row.event.id }}/report/">Attendees · {{ row.rsvp_count }} RSVPs / {{ row.attendance_count }} checked in</a>
 
@@ -34,7 +34,7 @@
 
         </div>
 
-        {% if row.event.registration_open %}<div class="share-line"><span><strong>Public guest link</strong><code>{{ row.share_url }}</code></span><a class="admin-link" href="{{ row.share_url }}" target="_blank" rel="noopener">Open link ↗</a></div>{% else %}<p class="meta" style="margin:18px 0 0">Registration is closed. Open it to publish a guest registration link.</p>{% endif %}
+        {% if row.event.registration_open %}<div class="share-line"><span><strong>Public guest link</strong><code>{{ row.share_url }}</code></span><a class="admin-link" href="{{ row.share_url }}" >Open link </a></div>{% else %}<p class="meta" style="margin:18px 0 0">Registration is closed. Open it to publish a guest registration link.</p>{% endif %}
 
       </article>
 

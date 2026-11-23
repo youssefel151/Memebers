@@ -15,6 +15,6 @@
       </article>
     {% empty %}<div class="empty">{% if query %}No members match that search.{% else %}No members have been added yet.{% endif %}</div>{% endfor %}
   </section>
-  {% if members.paginator.num_pages > 1 %}<nav class="roster-pagination" aria-label="Member pages">{% if members.has_previous %}<a href="?q={{ query|urlencode }}&amp;page={{ members.previous_page_number }}">← Previous</a>{% else %}<span></span>{% endif %}<span>Page {{ members.number }} of {{ members.paginator.num_pages }}</span>{% if members.has_next %}<a href="?q={{ query|urlencode }}&amp;page={{ members.next_page_number }}">Next →</a>{% else %}<span></span>{% endif %}</nav>{% endif %}
+  {% if members.paginator.num_pages > 1 %}<nav class="roster-pagination" aria-label="Member pages">{% if members.has_previous %}<a href="?q={{ query|urlencode }}&amp;page={{ members.previous_page_number }}"> Previous</a>{% else %}<span></span>{% endif %}<span>Page {{ members.number }} of {{ members.paginator.num_pages }}</span>{% if members.has_next %}<a href="?q={{ query|urlencode }}&amp;page={{ members.next_page_number }}">Next </a>{% else %}<span></span>{% endif %}</nav>{% endif %}
 </main>
 {% endblock %}

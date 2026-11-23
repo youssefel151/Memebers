@@ -36,6 +36,6 @@ class EventAdmin(admin.ModelAdmin):
         if not obj.registration_open:
             return "Open registration to share"
         return format_html(
-            '<a href="/register/?event={}" target="_blank" rel="noopener">Open share link ↗</a>',
+            '<a href="/register/?event={}" >Open share link </a>',
             obj.pk,
         )
