@@ -1,0 +1,41 @@
+/* Dark Orionex palette for Django administration */
+html[data-theme="dark"]{color-scheme:dark;--primary:#0b1026;--secondary:#18204a;--accent:#8c78f2;--body-bg:#0b1026;--body-fg:#f6f7fb;--body-quiet-color:#aeb7d2;--body-loud-color:#fff;--header-color:#f6f7fb;--header-branding-color:#f6f7fb;--header-bg:#18204a;--header-link-color:#d9ddf0;--breadcrumbs-fg:#d9ddf0;--breadcrumbs-link-fg:#5fc9d8;--breadcrumbs-bg:#121a3a;--link-fg:#b7aaff;--link-hover-color:#d6ceff;--link-selected-fg:#8c78f2;--hairline-color:#303a63;--border-color:#3a456f;--darkened-bg:#121a3a;--selected-bg:#252d58;--selected-row:#20294f;--close-button-bg:#59658e;--close-button-hover-bg:#7582af;--button-bg:#8c78f2;--button-hover-bg:#a596ff;--default-button-bg:#5fc9d8;--default-button-hover-bg:#84dce6;--delete-button-bg:#b84e68;--delete-button-hover-bg:#d2617a;--object-tools-bg:#8c78f2;--object-tools-hover-bg:#a596ff}
+html[data-theme="dark"] body,html[data-theme="dark"] #container{background:#0b1026;color:#f6f7fb}
+html[data-theme="dark"] #header{background:#18204a;color:#f6f7fb}
+html[data-theme="dark"] #branding h1,html[data-theme="dark"] #branding h1 a:link,html[data-theme="dark"] #branding h1 a:visited{color:#f6f7fb}
+html[data-theme="dark"] #user-tools,html[data-theme="dark"] #user-tools a{color:#d9ddf0}
+html[data-theme="dark"] div.breadcrumbs{background:#121a3a;color:#d9ddf0}
+html[data-theme="dark"] #content,html[data-theme="dark"] #content-main,html[data-theme="dark"] #content-related{color:#f6f7fb}
+html[data-theme="dark"] .module,html[data-theme="dark"] .inline-group,html[data-theme="dark"] .dashboard .module table{background:#18204a;border:1px solid #303a63}
+html[data-theme="dark"] .module h2,html[data-theme="dark"] .module caption,html[data-theme="dark"] .inline-group h2{background:#222d58;color:#f6f7fb}
+html[data-theme="dark"] #changelist-filter{background:#18204a;border-left:1px solid #303a63}
+html[data-theme="dark"] #changelist-filter h2{background:#222d58;color:#f6f7fb}
+html[data-theme="dark"] #changelist-filter li.selected a{color:#5fc9d8}
+html[data-theme="dark"] tr:nth-child(odd),html[data-theme="dark"] .row-form-errors{background:#141c3d}
+html[data-theme="dark"] tr:nth-child(even),html[data-theme="dark"] #changelist table tbody tr:hover{background:#18204a}
+html[data-theme="dark"] td,html[data-theme="dark"] th{border-color:#303a63}
+html[data-theme="dark"] input,html[data-theme="dark"] textarea,html[data-theme="dark"] select,html[data-theme="dark"] .vTextField,html[data-theme="dark"] .vLargeTextField,html[data-theme="dark"] .vXMLLargeTextField,html[data-theme="dark"] .vURLField,html[data-theme="dark"] .vIntegerField,html[data-theme="dark"] .vDateField,html[data-theme="dark"] .vTimeField,html[data-theme="dark"] .vForeignKeyRawIdAdminField,html[data-theme="dark"] .vUUIDField{background:#101733!important;border:1px solid #3a456f!important;color:#f6f7fb!important;border-radius:5px}
+html[data-theme="dark"] input:focus,html[data-theme="dark"] textarea:focus,html[data-theme="dark"] select:focus{border-color:#8c78f2!important}
+html[data-theme="dark"] a:link,html[data-theme="dark"] a:visited{color:#b7aaff}
+html[data-theme="dark"] a:hover{color:#5fc9d8}
+html[data-theme="dark"] a.button,html[data-theme="dark"] .button,html[data-theme="dark"] input[type=submit],html[data-theme="dark"] input[type=button],html[data-theme="dark"] .submit-row input,html[data-theme="dark"] .object-tools a{background:#8c78f2;color:#0b1026;border:0;border-radius:5px}
+html[data-theme="dark"] a.button:hover,html[data-theme="dark"] .button:hover,html[data-theme="dark"] input[type=submit]:hover,html[data-theme="dark"] input[type=button]:hover,html[data-theme="dark"] .submit-row input:hover,html[data-theme="dark"] .object-tools a:hover{background:#a596ff;color:#0b1026}
+html[data-theme="dark"] div.help,html[data-theme="dark"] form .help,html[data-theme="dark"] form p.help,html[data-theme="dark"] span.help{color:#aeb7d2}
+html[data-theme="dark"] ul.messagelist li{background:#18204a;color:#f6f7fb;border:1px solid #303a63}
+html[data-theme="dark"] #nav-sidebar{background:#121a3a;border-right:1px solid #303a63}
+html[data-theme="dark"] #nav-sidebar .current-app .section:link,html[data-theme="dark"] #nav-sidebar .current-app .section:visited{background:#222d58;color:#f6f7fb}
+html[data-theme="dark"] #nav-sidebar a:link,html[data-theme="dark"] #nav-sidebar a:visited{color:#c8d0e8}
+html[data-theme="dark"] #nav-sidebar a:hover{background:#252d58;color:#fff}
+html[data-theme="dark"] #toggle-nav-sidebar{background:#18204a;color:#f6f7fb;border-color:#303a63}
+html[data-theme="dark"] .object-tools a:focus,html[data-theme="dark"] .object-tools a:hover{background:#a596ff!important;color:#0b1026!important}
+html[data-theme="dark"] .calendarbox,html[data-theme="dark"] .clockbox,html[data-theme="dark"] .calendar caption,html[data-theme="dark"] .calendar td a,html[data-theme="dark"] .calendar td a:link{background:#18204a;color:#f6f7fb}
+html[data-theme="dark"] .calendar td a:hover{background:#8c78f2;color:#0b1026}
+html[data-theme="dark"] .theme-toggle{width:32px;height:32px;display:inline-grid;place-items:center;vertical-align:middle;padding:0;margin-right:10px;border:1px solid #c8cbd5;border-radius:50%;background:#fff;color:#18204a;cursor:pointer}
+html[data-theme="dark"] .theme-toggle svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+html[data-theme="dark"] .theme-toggle .icon-moon{display:none}
+html[data-theme="dark"] .theme-toggle{background:#18204a;border-color:#3a456f;color:#f6f7fb}
+html[data-theme="dark"] .theme-toggle .icon-sun{display:none}
+html[data-theme="dark"] .theme-toggle .icon-moon{display:block}
+.theme-toggle{width:32px;height:32px;display:inline-grid;place-items:center;vertical-align:middle;padding:0;margin-right:10px;border:1px solid #c8cbd5;border-radius:50%;background:#fff;color:#18204a;cursor:pointer}.theme-toggle svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.theme-toggle .icon-moon{display:none}html[data-theme="dark"] .theme-toggle{background:#18204a;border-color:#3a456f;color:#f6f7fb}html[data-theme="dark"] .theme-toggle .icon-sun{display:none}html[data-theme="dark"] .theme-toggle .icon-moon{display:block}
+
+.language-picker{display:inline-flex;align-items:center;gap:8px;margin:8px;color:#596078;font-size:12px}.language-picker select{width:auto;min-width:112px;padding:6px 25px 6px 9px;border:1px solid #c8cbd5;border-radius:5px;background:#fff;color:#18204a}html[data-theme="dark"] .language-picker{color:#aeb7d2}html[data-theme="dark"] .language-picker select{background:#101733;border-color:#3a456f;color:#f6f7fb}

@@ -1,6 +1,6 @@
 from django import forms
 
-from .models import Event, Member
+from .models import Event, Member, Responsibility
 
 
 class EventForm(forms.ModelForm):
@@ -45,3 +45,23 @@ class MemberPermissionsForm(forms.ModelForm):
             "can_manage_announcements": "Create, edit, and delete announcements",
             "can_manage_permissions": "Assign app permissions to members",
         }
+
+
+class ResponsibilityForm(forms.ModelForm):
+    members = forms.ModelMultipleChoiceField(
+        queryset=Member.objects.none(),
+        required=False,
+        label="Assigned members",
+        widget=forms.CheckboxSelectMultiple,
+    )
+
+    class Meta:
+        model = Responsibility
+        fields = ("name", "description", "members")
+        widgets = {"description": forms.Textarea(attrs={"rows": 3})}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["members"].queryset = Member.objects.select_related("user").order_by(
+            "user__first_name", "user__last_name", "user__username"
+        )

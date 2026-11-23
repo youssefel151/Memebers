@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.utils.html import format_html
-from .models import Member, Event, Attendance, Announcement, Message, Guest
+from .models import Member, Event, Attendance, Announcement, Message, Guest, Responsibility
 from .admin_site import admin_site
 
 
@@ -39,3 +39,10 @@ class EventAdmin(admin.ModelAdmin):
             '<a href="/register/?event={}" >Open share link </a>',
             obj.pk,
         )
+
+
+@admin.register(Responsibility, site=admin_site)
+class ResponsibilityAdmin(admin.ModelAdmin):
+    list_display = ("name",)
+    search_fields = ("name", "description", "members__user__first_name", "members__user__last_name")
+    filter_horizontal = ("members",)

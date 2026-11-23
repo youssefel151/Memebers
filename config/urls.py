@@ -25,6 +25,8 @@ urlpatterns = [
     path('messages/', views.inbox),
     path('messages/<int:user_id>/', views.conversation),
     path('members/', views.members_list, name='members'),
+    path('responsibilities/', views.responsibilities_list, name='responsibilities'),
+    path('responsibilities/<int:responsibility_id>/delete/', views.responsibility_delete, name='responsibility_delete'),
     path('members/<int:member_id>/remove/', views.member_remove, name='member_remove'),
     path('guests/', views.guests_list, name='guests'),
     path('events/', views.event_management, name='events'),

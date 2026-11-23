@@ -8,7 +8,7 @@
   <section class="roster-list" aria-label="Members">
     {% for m in members %}
       <article class="card roster-card">
-        <div class="roster-row"><div><strong>{{ m.user.get_full_name|default:m.user.username }}</strong><div class="muted">{{ m.user.email|default:m.user.username }}</div></div><div class="roster-actions"><a href="/qr/{{ m.qr_token }}/">View QR</a>{% if not m.user.is_superuser and m.user_id != user.id %}<a class="roster-remove" href="/members/{{ m.id }}/remove/">Remove</a>{% endif %}</div></div>
+        <div class="roster-row"><div><strong>{{ m.user.get_full_name|default:m.user.username }}</strong><div class="muted">{{ m.user.email|default:m.user.username }}</div>{% if m.responsibilities.all %}<div class="responsibility-badges roster-responsibilities">{% for responsibility in m.responsibilities.all %}<span class="badge">{{ responsibility.name }}</span>{% endfor %}</div>{% endif %}</div><div class="roster-actions"><a href="/qr/{{ m.qr_token }}/">View QR</a>{% if not m.user.is_superuser and m.user_id != user.id %}<a class="roster-remove" href="/members/{{ m.id }}/remove/">Remove</a>{% endif %}</div></div>
         {% if capabilities.can_manage_permissions and not m.user.is_superuser and m.user_id != user.id %}
           <details class="roster-access"><summary>Permissions</summary><form method="post" action="/members/" class="roster-permission-form">{% csrf_token %}<input type="hidden" name="member_id" value="{{ m.id }}"><div class="roster-permission-grid">{% for field in m.permissions_form %}<label>{{ field }} {{ field.label }}</label>{% endfor %}</div><button class="button button-small" type="submit">Save permissions</button></form></details>
         {% endif %}

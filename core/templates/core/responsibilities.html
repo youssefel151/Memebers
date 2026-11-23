@@ -1,0 +1,30 @@
+{% extends 'core/base.html' %}
+{% block title %}Responsibilities{% endblock %}
+{% block body %}
+<main class="page roster-page">
+  <header class="roster-header"><div><span class="eyebrow">Admin management</span><h1>Responsibilities</h1><p class="lede">Create responsibilities and assign them to members. Members can view their assignments but cannot change them.</p></div></header>
+  <section class="card responsibility-create">
+    <h2>Add a responsibility</h2>
+    <form method="post" class="responsibility-form">{% csrf_token %}<input type="hidden" name="action" value="create">
+      <div class="field"><label for="{{ create_form.name.id_for_label }}">{{ create_form.name.label }}</label>{{ create_form.name }}{% for error in create_form.name.errors %}<div class="notice notice-error">{{ error }}</div>{% endfor %}</div>
+      <div class="field"><label for="{{ create_form.description.id_for_label }}">{{ create_form.description.label }}</label>{{ create_form.description }}{% for error in create_form.description.errors %}<div class="notice notice-error">{{ error }}</div>{% endfor %}</div>
+      <div class="field"><label>{{ create_form.members.label }}</label><div class="responsibility-assignees">{{ create_form.members }}</div>{% for error in create_form.members.errors %}<div class="notice notice-error">{{ error }}</div>{% endfor %}</div>
+      <button class="button" type="submit">Add responsibility</button>
+    </form>
+  </section>
+  <div class="section-head"><div><span class="eyebrow">Assignment list</span><h2>Responsibilities and members</h2></div></div>
+  <section class="responsibility-list" aria-label="Responsibilities">
+    {% for row in responsibility_rows %}
+      <article class="card responsibility-card">
+        <div class="responsibility-card-head"><div><span class="eyebrow">Responsibility</span><h3>{{ row.responsibility.name }}</h3></div><a class="roster-remove" href="/responsibilities/{{ row.responsibility.id }}/delete/">Delete</a></div>
+        <form method="post" class="responsibility-form">{% csrf_token %}<input type="hidden" name="action" value="update"><input type="hidden" name="responsibility_id" value="{{ row.responsibility.id }}">
+          <div class="field"><label for="{{ row.form.name.id_for_label }}">{{ row.form.name.label }}</label>{{ row.form.name }}{% for error in row.form.name.errors %}<div class="notice notice-error">{{ error }}</div>{% endfor %}</div>
+          <div class="field"><label for="{{ row.form.description.id_for_label }}">{{ row.form.description.label }}</label>{{ row.form.description }}{% for error in row.form.description.errors %}<div class="notice notice-error">{{ error }}</div>{% endfor %}</div>
+          <div class="field"><label>{{ row.form.members.label }}</label><div class="responsibility-assignees">{{ row.form.members }}</div>{% for error in row.form.members.errors %}<div class="notice notice-error">{{ error }}</div>{% endfor %}</div>
+          <button class="button button-small" type="submit">Save responsibility</button>
+        </form>
+      </article>
+    {% empty %}<div class="empty">No responsibilities yet. Add one above.</div>{% endfor %}
+  </section>
+</main>
+{% endblock %}

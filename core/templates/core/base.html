@@ -4,29 +4,37 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#0b1026">
+  <meta name="theme-color" content="#f6f7fb" id="theme-color-meta">
+  <link rel="icon" type="image/svg+xml" href="{% static 'core/orionex-mark.svg' %}">
+  <link rel="apple-touch-icon" href="{% static 'core/orionex-mark.svg' %}">
   <title>{% block title %}Orionex{% endblock %} · Orionex</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <script>try{if(localStorage.getItem('orionex-theme')==='dark')document.documentElement.dataset.theme='dark'}catch(e){}</script>
   <link rel="stylesheet" href="{% static 'core/site.css' %}">
+  <script defer src="{% static 'core/language.js' %}"></script>
   {% block head %}{% endblock %}
 </head>
 <body>
   <header class="site-header">
     <div class="nav-wrap">
+      <button type="button" class="mobile-menu-toggle" aria-label="Open navigation" aria-expanded="false" aria-controls="main-navigation" title="Open navigation">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.6"></circle><circle cx="12" cy="12" r="1.6"></circle><circle cx="19" cy="12" r="1.6"></circle></svg>
+      </button>
       <a class="brand" href="{% if user.is_authenticated %}/home/{% else %}/{% endif %}">
         <img src="{% static 'core/orionex-mark.svg' %}" alt="">
         <span>ORION<span style="color:#6176d6">EX</span></span>
       </a>
-      <nav class="nav-links" aria-label="Main navigation">
+      <nav class="nav-links" id="main-navigation" aria-label="Main navigation">
         {% if user.is_authenticated %}
           <a href="/home/" class="nav-item {% if request.path == '/home/' %}active{% endif %}">Overview</a>
-          <details class="nav-menu {% if request.path == '/directory/' or '/messages/' in request.path or request.path == '/members/' %}active{% endif %}">
+          <details class="nav-menu {% if request.path == '/directory/' or '/messages/' in request.path or request.path == '/members/' or '/responsibilities/' in request.path %}active{% endif %}">
             <summary>Community</summary>
             <div class="nav-dropdown">
               <a href="/directory/">Member directory</a>
               <a href="/messages/">Messages{% if unread %}<span class="badge">{{ unread }}</span>{% endif %}</a>
               {% if capabilities.can_manage_members %}<a href="/members/">Member roster</a>{% endif %}
+              {% if capabilities.can_manage_permissions %}<a href="/responsibilities/">Responsibilities</a>{% endif %}
             </div>
           </details>
           {% if capabilities.can_manage_events or capabilities.can_manage_guests or capabilities.can_scan or capabilities.can_manage_announcements %}
@@ -46,6 +54,10 @@
           <a href="/login/" class="nav-cta">Member sign in</a>
         {% endif %}
       </nav>
+      <button type="button" class="theme-toggle" aria-label="Switch to dark mode" title="Switch to dark mode">
+        <svg class="icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"></path></svg>
+        <svg class="icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.4 15.5A8.5 8.5 0 0 1 8.5 3.6 8.5 8.5 0 1 0 20.4 15.5Z"></path></svg>
+      </button>
       {% if user.is_authenticated %}<span class="nav-user">{{ user.first_name|default:user.username }}</span>{% endif %}
     </div>
   </header>
@@ -54,26 +66,53 @@
   <footer class="footer">
     <span><b>ORIONEX</b> &nbsp;Beyond theory, building the future.</span>
     <span>Designed around people and possibility.</span>
+    <label class="language-picker" for="site-language"><span>Language</span><select id="site-language" aria-label="Language"><option value="en">English</option><option value="fr">Français</option></select></label>
   </footer>
   {% block scripts %}{% endblock %}
   <script>
+    const navWrap = document.querySelector('.nav-wrap');
+    const mobileMenuToggle = document.querySelector('.mobile-menu-toggle');
+    const navLinks = document.querySelector('.nav-links');
+    const setMobileMenuOpen = (isOpen) => {
+      navWrap.classList.toggle('mobile-nav-open', isOpen);
+      mobileMenuToggle.setAttribute('aria-expanded', String(isOpen));
+      const label = isOpen ? 'Close navigation' : 'Open navigation';
+      mobileMenuToggle.setAttribute('aria-label', label);
+      mobileMenuToggle.title = label;
+    };
+    mobileMenuToggle.addEventListener('click', () => {
+      setMobileMenuOpen(!navWrap.classList.contains('mobile-nav-open'));
+    });
+    navLinks.querySelectorAll('a').forEach((link) => {
+      link.addEventListener('click', () => setMobileMenuOpen(false));
+    });
+    navWrap.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') setMobileMenuOpen(false);
+    });
+    const themeToggle = document.querySelector('.theme-toggle');
+    const themeColorMeta = document.getElementById('theme-color-meta');
+    const syncThemeControl = () => {
+      const isDark = document.documentElement.dataset.theme === 'dark';
+      const label = isDark ? 'Switch to light mode' : 'Switch to dark mode';
+      themeToggle.setAttribute('aria-label', label);
+      themeToggle.title = label;
+      if (themeColorMeta) themeColorMeta.content = isDark ? '#0b1026' : '#f6f7fb';
+    };
+    syncThemeControl();
+    themeToggle.addEventListener('click', () => {
+      const nextTheme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+      if (nextTheme === 'dark') document.documentElement.dataset.theme = 'dark';
+      else delete document.documentElement.dataset.theme;
+      try { localStorage.setItem('orionex-theme', nextTheme); } catch (e) {}
+      syncThemeControl();
+    });
     document.querySelectorAll('.toast').forEach((toast) => {
       const dismiss = () => { toast.classList.add('toast-hiding'); window.setTimeout(() => toast.remove(), 220); };
       toast.querySelector('.toast-close').addEventListener('click', dismiss);
       window.setTimeout(dismiss, toast.classList.contains('toast-error') ? 9000 : 6000);
     });
-    const navMenus = document.querySelectorAll('.nav-menu');
-    navMenus.forEach((menu) => {
-      if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
-        let closeTimer;
-        menu.addEventListener('mouseenter', () => { window.clearTimeout(closeTimer); menu.open = true; });
-        menu.addEventListener('mouseleave', () => { closeTimer = window.setTimeout(() => { if (!menu.matches(':hover') && !menu.contains(document.activeElement)) menu.open = false; }, 220); });
-      }
-    });
-    document.addEventListener('click', (event) => {
-      const selectedMenu = event.target.closest('.nav-menu');
-      navMenus.forEach((menu) => { if (menu !== selectedMenu) menu.open = false; });
-    });
+    // Keep touch navigation native: details/summary opens on the first tap.
+    // Desktop hover is handled by CSS so it cannot intercept phone taps.
   </script>
 </body>
 </html>

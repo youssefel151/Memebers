@@ -22,6 +22,18 @@ class Member(models.Model):
         return self.user.get_full_name() or self.user.username
 
 
+class Responsibility(models.Model):
+    name = models.CharField(max_length=120, unique=True)
+    description = models.TextField(blank=True)
+    members = models.ManyToManyField(Member, related_name="responsibilities", blank=True)
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+
 class Event(models.Model):
     title = models.CharField(max_length=200)
     date = models.DateTimeField()

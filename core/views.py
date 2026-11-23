@@ -19,8 +19,8 @@ from django.http import HttpResponse, Http404, JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.utils import timezone
 from django.views.decorators.http import require_POST
-from .models import Member, Event, Attendance, Announcement, Message, Guest, EventRegistration
-from .forms import EventForm, AnnouncementForm, MemberPermissionsForm
+from .models import Member, Event, Attendance, Announcement, Message, Guest, EventRegistration, Responsibility
+from .forms import EventForm, AnnouncementForm, MemberPermissionsForm, ResponsibilityForm
 from .permissions import capability_required, has_capability
 
 
@@ -162,7 +162,7 @@ def members_list(request):
             else:
                 messages.error(request, "Please review the permission settings and try again.")
         return redirect("members")
-    members = Member.objects.select_related("user").order_by("user__first_name", "user__last_name")
+    members = Member.objects.select_related("user").prefetch_related("responsibilities").order_by("user__first_name", "user__last_name")
     query = request.GET.get("q", "").strip()
     if query:
         members = members.filter(Q(user__first_name__icontains=query) | Q(user__last_name__icontains=query) | Q(user__email__icontains=query))
@@ -170,6 +170,61 @@ def members_list(request):
     for member in page:
         member.permissions_form = MemberPermissionsForm(instance=member)
     return render(request, "core/members.html", {"members": page, "query": query})
+
+
+@capability_required("can_manage_permissions")
+def responsibilities_list(request):
+    create_form = ResponsibilityForm(prefix="new")
+    bound_edit = None
+    bound_edit_id = None
+
+    if request.method == "POST":
+        action = request.POST.get("action")
+        if action == "create":
+            create_form = ResponsibilityForm(request.POST, prefix="new")
+            if create_form.is_valid():
+                responsibility = create_form.save()
+                messages.success(request, f"Responsibility '{responsibility.name}' was added.")
+                return redirect("responsibilities")
+            messages.error(request, "Please correct the responsibility details below.")
+        elif action == "update":
+            responsibility = get_object_or_404(Responsibility, pk=request.POST.get("responsibility_id"))
+            bound_edit = ResponsibilityForm(
+                request.POST, instance=responsibility, prefix=f"r{responsibility.pk}"
+            )
+            bound_edit_id = responsibility.pk
+            if bound_edit.is_valid():
+                bound_edit.save()
+                messages.success(request, f"Responsibility '{responsibility.name}' was updated.")
+                return redirect("responsibilities")
+            messages.error(request, "Please correct the responsibility details below.")
+
+    rows = []
+    for responsibility in Responsibility.objects.prefetch_related("members__user"):
+        form = bound_edit if responsibility.pk == bound_edit_id else ResponsibilityForm(
+            instance=responsibility, prefix=f"r{responsibility.pk}"
+        )
+        rows.append({"responsibility": responsibility, "form": form})
+    return render(request, "core/responsibilities.html", {
+        "create_form": create_form,
+        "responsibility_rows": rows,
+    })
+
+
+@capability_required("can_manage_permissions")
+def responsibility_delete(request, responsibility_id):
+    responsibility = get_object_or_404(Responsibility, pk=responsibility_id)
+    if request.method == "POST":
+        name = responsibility.name
+        responsibility.delete()
+        messages.success(request, f"Responsibility '{name}' was deleted.")
+        return redirect("responsibilities")
+    return render(request, "core/confirm_delete.html", {
+        "title": "Delete responsibility",
+        "object_name": responsibility.name,
+        "warning": "This removes this responsibility and its assignments from all members.",
+        "cancel_url": "/responsibilities/",
+    })
 
 
 @capability_required("can_manage_members")
@@ -461,8 +516,6 @@ def profile(request):
         user.last_name = request.POST.get("last_name", "").strip()
         user.save()
         member.phone = request.POST.get("phone", "").strip()
-        member.interests = request.POST.get("interests", "").strip()[:300]
-        member.location = request.POST.get("location", "").strip()[:120]
         member.directory_visible = request.POST.get("directory_visible") == "on"
         member.save()
         return redirect("/profile/")
@@ -475,7 +528,8 @@ def profile(request):
             .order_by("-event__date")
         )
     registrations = EventRegistration.objects.filter(member=member, event__date__gte=timezone.now()).select_related("event") if member else []
-    return render(request, "core/profile.html", {"member": member, "attendances": attendances, "registrations": registrations})
+    responsibilities = member.responsibilities.all() if member else []
+    return render(request, "core/profile.html", {"member": member, "attendances": attendances, "registrations": registrations, "responsibilities": responsibilities})
 
 
 @login_required
@@ -493,14 +547,14 @@ def home(request):
 @login_required
 def directory(request):
     members = (
-        Member.objects.select_related("user")
+        Member.objects.select_related("user").prefetch_related("responsibilities")
         .exclude(user=request.user)
         .filter(directory_visible=True)
         .order_by("user__first_name", "user__last_name")
     )
     query = request.GET.get("q", "").strip()
     if query:
-        members = members.filter(Q(user__first_name__icontains=query) | Q(user__last_name__icontains=query) | Q(interests__icontains=query) | Q(location__icontains=query))
+        members = members.filter(Q(user__first_name__icontains=query) | Q(user__last_name__icontains=query) | Q(location__icontains=query) | Q(responsibilities__name__icontains=query)).distinct()
     return render(request, "core/directory.html", {"members": Paginator(members, 25).get_page(request.GET.get("page")), "query": query})
 
 
