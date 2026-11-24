@@ -1,0 +1,21 @@
+# Python runtime files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Local environments and secrets
+venv/
+.venv/
+.env
+.env.*
+!.env.example
+
+# Local data and generated deployment assets
+staticfiles/
+*.sqlite3-journal
+
+# Editor and operating system files
+.vscode/
+.idea/
+Thumbs.db
+Desktop.ini

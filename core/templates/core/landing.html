@@ -1,2 +1,39 @@
-{% extends 'core/base.html' %}{% block title %}Beyond theory{% endblock %}{% block body %}<main class="page"><section class="hero"><div class="hero-inner"><span class="eyebrow">A community looking forward</span><h1>Ideas connect.<br><span>Possibilities orbit.</span></h1><p>Orionex brings curious minds together to share knowledge, meet people, and build what comes next.</p></div><img class="hero-art" src="{% load static %}{% static 'core/orionex-mark.svg' %}" alt="Orion constellation mark"></section><div class="stat-strip"><div class="stat"><strong>{{ member_count }}</strong><span>Community members</span></div><div class="stat"><strong>{{ upcoming_count }}</strong><span>Upcoming events</span></div><div class="stat"><strong>{{ open_registration_count }}</strong><span>Open for registration</span></div></div><section id="events"><div class="section-head"><div><span class="eyebrow">Discover</span><h2>Upcoming events</h2></div></div><div class="grid">{% for e in upcoming %}<a class="card event-card" href="/events/{{ e.id }}/"><div class="event-date">{{ e.date|date:"D, d M · H:i" }}</div><h3>{{ e.title }}</h3>{% if e.place %}<p class="meta">Location: &nbsp;{{ e.place }}</p>{% endif %}<span class="badge">{% if e.registration_open %}Registration open{% else %}Registration closed{% endif %}</span></a>{% empty %}<div class="empty" style="grid-column:1/-1">No upcoming events are available right now.</div>{% endfor %}</div></section></main>{% endblock %}
-
+{% extends 'core/base.html' %}
+{% load static %}
+{% block title %}Orionex community{% endblock %}
+{% block body %}
+<main class="page">
+  <section class="hero" aria-labelledby="landing-title">
+    <div class="hero-inner">
+      <span class="eyebrow">A community for curious people</span>
+      <h1 id="landing-title">Meet. Learn.<br><span>Build together.</span></h1>
+      <p>Orionex is a community club where curious people share ideas, meet one another, and build projects together.</p>
+      <div class="hero-actions">
+        <a class="button button-glow" href="#events">Browse open events</a>
+        <a class="button button-light" href="/login/">Member sign in</a>
+      </div>
+    </div>
+    <img class="hero-art" src="{% static 'core/orionex-mark.svg' %}" alt="" aria-hidden="true">
+  </section>
+  <div class="stat-strip" aria-label="Community at a glance">
+    <div class="stat"><strong>{{ member_count }}</strong><span>Community members</span></div>
+    <div class="stat"><strong>{{ upcoming_count }}</strong><span>Upcoming events</span></div>
+    <div class="stat"><strong>{{ open_registration_count }}</strong><span>Open for registration</span></div>
+  </div>
+  <section id="events" aria-labelledby="events-title">
+    <div class="section-head"><div><span class="eyebrow">Open to join</span><h2 id="events-title">Upcoming events</h2><p class="muted">See what’s coming up and choose an event that interests you.</p></div></div>
+    <div class="grid">
+      {% for e in upcoming %}
+        <a class="card event-card" href="/events/{{ e.id }}/">
+          <div class="event-date">{{ e.date|date:"D, d M · H:i" }}</div>
+          <h3>{{ e.title }}</h3>
+          {% if e.place %}<p class="meta">Location: {{ e.place }}</p>{% endif %}
+          <span class="badge">Registration open</span>
+        </a>
+      {% empty %}
+        <div class="empty" style="grid-column:1/-1">No open events right now. Check back soon.</div>
+      {% endfor %}
+    </div>
+  </section>
+</main>
+{% endblock %}

@@ -1,0 +1,29 @@
+{% extends "core/base.html" %}
+{% block title %}Page unavailable{% endblock %}
+
+{% block body %}
+<main class="page error-page">
+  <section class="error-card" aria-labelledby="error-title">
+    <div class="error-illustration" role="img" aria-label="A page drifting out of reach">
+      <svg viewBox="0 0 320 230" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <circle cx="160" cy="112" r="92" fill="url(#error-glow)"/>
+        <path d="M101 47h85l34 34v96a12 12 0 0 1-12 12h-95a12 12 0 0 1-12-12V59a12 12 0 0 1 12-12Z" fill="white" stroke="#DDE2F0" stroke-width="3"/>
+        <path d="M186 48v25a9 9 0 0 0 9 9h25" stroke="#DDE2F0" stroke-width="3"/>
+        <path d="M128 106h52M128 124h37" stroke="#D7DCEF" stroke-width="7" stroke-linecap="round"/>
+        <circle cx="151" cy="153" r="19" fill="#F1EFFF"/>
+        <path d="M145 147a2 2 0 1 1 0 4m13-4a2 2 0 1 1 0 4m-13 9q6-6 13 0" stroke="#7772C8" stroke-width="3" stroke-linecap="round"/>
+        <path d="M76 143c-12 3-17 10-18 18m186-62c11-2 17 2 20 8" stroke="#A7B4D7" stroke-width="3" stroke-linecap="round" stroke-dasharray="2 8"/>
+        <circle cx="77" cy="94" r="5" fill="#61C7D5"/><circle cx="242" cy="159" r="4" fill="#9B83F0"/>
+        <defs><linearGradient id="error-glow" x1="68" y1="33" x2="258" y2="207" gradientUnits="userSpaceOnUse"><stop stop-color="#E9E7FF"/><stop offset="1" stop-color="#DDF7F8"/></linearGradient></defs>
+      </svg>
+    </div>
+    <span class="eyebrow">Error 404</span>
+    <h1 id="error-title">This page is out of reach.</h1>
+    <p class="lede">The link may be outdated, or this page may no longer be available. Let’s get you somewhere useful.</p>
+    <div class="error-actions">
+      <a class="button button-glow" href="{% if user.is_authenticated %}/home/{% else %}/{% endif %}">Go to {% if user.is_authenticated %}overview{% else %}homepage{% endif %}</a>
+      <a class="button button-outline" href="javascript:history.back()">Go back</a>
+    </div>
+  </section>
+</main>
+{% endblock %}
