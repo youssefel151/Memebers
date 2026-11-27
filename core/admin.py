@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.utils.html import format_html
-from .models import Member, Event, Attendance, Announcement, Message, Guest, Responsibility
+from .models import Member, Event, Attendance, Announcement, Message, Guest, Responsibility, Project, Task, EventFeedback, LearningResource, JoinApplication, Notification, Partner, GalleryItem, BudgetEntry
 from .admin_site import admin_site
 
 
@@ -46,3 +46,7 @@ class ResponsibilityAdmin(admin.ModelAdmin):
     list_display = ("name",)
     search_fields = ("name", "description", "members__user__first_name", "members__user__last_name")
     filter_horizontal = ("members",)
+
+
+for model in (Project, Task, EventFeedback, LearningResource, JoinApplication, Notification, Partner, GalleryItem, BudgetEntry):
+    admin_site.register(model)

@@ -1,0 +1,26 @@
+{% extends 'core/base.html' %}
+{% block title %}Management home{% endblock %}
+{% block body %}
+<main class="page dashboard-page">
+  <span class="eyebrow">Staff workspace</span><h1>Management home</h1><p class="lede">Common club operations in one place. Your access controls which tools are available.</p>
+  <div class="dashboard-admin-links manage-quicklinks">
+    {% if capabilities.can_manage_events %}<a href="/events/new/">+ Create event</a>{% endif %}
+    {% if capabilities.can_manage_members %}<a href="/members/add/">+ Add member</a>{% endif %}
+    {% if capabilities.can_manage_announcements %}<a href="/announcements/new/">+ Post announcement</a>{% endif %}
+    {% if capabilities.can_manage_events %}<a href="/analytics/">View reports</a>{% endif %}
+  </div>
+  <div class="manage-groups">
+    {% if capabilities.can_manage_events or capabilities.can_manage_guests or capabilities.can_scan %}<section class="card manage-group"><span class="eyebrow">Events</span><h2>Run club activities</h2><div class="manage-link-list">
+      {% if capabilities.can_manage_events %}<a href="/events/">Manage events <span>{{ upcoming_event_count }} upcoming</span></a><a href="/event-feedback/">Review event feedback</a><a href="/budget/">Track the budget</a>{% endif %}
+      {% if capabilities.can_manage_guests %}<a href="/guests/">Review guest requests <span>{{ pending_guest_count }} pending</span></a>{% endif %}
+      {% if capabilities.can_scan %}<a href="/scan/">Check in attendees</a>{% endif %}
+    </div></section>{% endif %}
+    {% if capabilities.can_manage_members or capabilities.can_manage_permissions %}<section class="card manage-group"><span class="eyebrow">Membership</span><h2>Support your members</h2><div class="manage-link-list">
+      {% if capabilities.can_manage_members %}<a href="/members/">Member roster <span>{{ member_count }} members</span></a><a href="/applications/">Join applications <span>{{ pending_application_count }} pending</span></a>{% endif %}
+      {% if capabilities.can_manage_permissions %}<a href="/responsibilities/">Manage team responsibilities</a>{% endif %}
+    </div></section>{% endif %}
+    {% if capabilities.can_manage_announcements %}<section class="card manage-group"><span class="eyebrow">Communication</span><h2>Keep everyone informed</h2><div class="manage-link-list"><a href="/announcements/">Manage announcements</a><a href="/notifications/">View notifications</a></div></section>{% endif %}
+    {% if user.is_staff %}<section class="card manage-group"><span class="eyebrow">Configuration</span><h2>Site administration</h2><div class="manage-link-list"><a href="/admin/">Open the admin site</a></div></section>{% endif %}
+  </div>
+</main>
+{% endblock %}

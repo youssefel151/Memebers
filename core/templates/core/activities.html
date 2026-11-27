@@ -1,0 +1,12 @@
+{% extends 'core/base.html' %}
+{% block title %}Activities & events{% endblock %}
+{% block body %}
+<main class="page">
+  <span class="eyebrow">Orionex in action</span><h1>Activities &amp; events</h1><p class="lede">Explore upcoming events and look back at what the community has done.</p>
+  <div class="grid">
+    {% for event in events %}<a class="card event-card" href="/events/{{ event.id }}/"><div class="event-date">{{ event.date|date:'D, d M Y · H:i' }}</div><h2>{{ event.title }}</h2>{% if event.place %}<p class="meta">{{ event.place }}</p>{% endif %}<p>{{ event.description|truncatewords:24 }}</p>{% if event.date >= today %}{% if event.registration_open %}<span class="badge badge-approved">Registration open</span>{% else %}<span class="badge">Coming up</span>{% endif %}{% else %}<span class="badge">Past event</span>{% endif %}</a>
+    {% empty %}<div class="empty">Events and activities will be listed here.</div>{% endfor %}
+  </div>
+  {% if events.has_other_pages %}<div class="toolbar" style="justify-content:center;margin-top:28px">{% if events.has_previous %}<a class="button button-outline" href="?page={{ events.previous_page_number }}">Previous</a>{% endif %}<span class="meta">Page {{ events.number }} of {{ events.paginator.num_pages }}</span>{% if events.has_next %}<a class="button button-outline" href="?page={{ events.next_page_number }}">Next</a>{% endif %}</div>{% endif %}
+</main>
+{% endblock %}

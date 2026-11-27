@@ -11,6 +11,13 @@ CAPABILITIES = (
     "can_scan",
     "can_manage_announcements",
     "can_manage_permissions",
+    "can_access_events",
+    "can_access_projects",
+    "can_access_calendar",
+    "can_access_directory",
+    "can_access_messages",
+    "can_access_resources",
+    "can_access_notifications",
 )
 
 

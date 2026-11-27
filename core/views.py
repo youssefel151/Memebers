@@ -13,14 +13,15 @@ from django.core.validators import validate_email
 from django.core.mail import send_mail
 from django.conf import settings
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Q, Sum, Prefetch
 from django.core.paginator import Paginator
-from django.http import HttpResponse, Http404, JsonResponse
+from django.http import HttpResponse, Http404, JsonResponse, FileResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.utils import timezone
 from django.views.decorators.http import require_POST
-from .models import Member, Event, Attendance, Announcement, Message, Guest, EventRegistration, Responsibility
-from .forms import EventForm, AnnouncementForm, MemberPermissionsForm, ResponsibilityForm
+from django.views.decorators.cache import never_cache
+from .models import Member, Event, Attendance, Announcement, Message, Guest, EventRegistration, Responsibility, Project, Task, EventFeedback, LearningResource, JoinApplication, Notification, Partner, GalleryItem, BudgetEntry
+from .forms import EventForm, AnnouncementForm, MemberPermissionsForm, ResponsibilityForm, ProjectForm, TaskForm, EventFeedbackForm, LearningResourceForm, JoinApplicationForm, BudgetEntryForm
 from .permissions import capability_required, has_capability
 
 
@@ -45,6 +46,10 @@ def _safe_csv_cell(value):
     if isinstance(value, str) and value.lstrip().startswith(("=", "+", "-", "@", "\t", "\r")):
         return "'" + value
     return value
+
+
+def _can_manage_projects(user):
+    return has_capability(user, "can_manage_members") or has_capability(user, "can_manage_events")
 
 
 def landing(request):
@@ -149,6 +154,15 @@ def register(request):
 @capability_required("can_manage_members")
 def members_list(request):
     if request.method == "POST":
+        if request.POST.get("action") == "team_visibility":
+            member = get_object_or_404(Member.objects.select_related("user"), pk=request.POST.get("member_id"))
+            if member.user.is_superuser:
+                messages.error(request, "Public team visibility cannot be changed for a superuser here.")
+            else:
+                member.public_team_visible = "public_team_visible" in request.POST
+                member.save(update_fields=["public_team_visible"])
+                messages.success(request, f"Public team visibility updated for {member}.")
+            return redirect("members")
         if not has_capability(request.user, "can_manage_permissions"):
             raise PermissionDenied
         member = get_object_or_404(Member.objects.select_related("user"), pk=request.POST.get("member_id"))
@@ -323,6 +337,7 @@ def event_management(request):
             event.registration_open = not event.registration_open
             event.save(update_fields=["registration_open"])
             state = "open" if event.registration_open else "paused"
+            _notify_members(f"Registration {state}: {event.title}", f"Registration has been {state} for this event.", f"/events/{event.pk}/")
             messages.success(request, f"Public registration is {state} for {event.title}.")
         return redirect("events")
 
@@ -343,7 +358,13 @@ def event_edit(request, event_id=None):
     if request.method == "POST":
         form = EventForm(request.POST, instance=event)
         if form.is_valid():
+            is_new = event is None
+            changed = bool(form.changed_data)
             saved = form.save()
+            if is_new:
+                _notify_members(f"New event: {saved.title}", "A new club event is on the calendar.", f"/events/{saved.pk}/")
+            elif changed:
+                _notify_members(f"Event updated: {saved.title}", "Event details have changed. Check the latest information.", f"/events/{saved.pk}/")
             messages.success(request, f"{saved.title} has been saved.")
             return redirect("events")
     else:
@@ -368,16 +389,20 @@ def event_delete(request, event_id):
 
 
 def event_detail(request, event_id):
+    if request.user.is_authenticated and not has_capability(request.user, "can_access_events"):
+        raise PermissionDenied
     event = get_object_or_404(Event, id=event_id)
     member = Member.objects.filter(user=request.user).first() if request.user.is_authenticated else None
     registered = bool(member and EventRegistration.objects.filter(member=member, event=event).exists())
     rsvp_count = event.member_registrations.count()
     guest_count = event.guests.filter(status="approved").count()
     full = bool(event.capacity and rsvp_count + guest_count >= event.capacity)
-    return render(request, "core/event_detail.html", {"event": event, "member": member, "registered": registered, "is_open": event.registration_open and event.date >= timezone.now(), "full": full, "rsvp_count": rsvp_count, "guest_count": guest_count})
+    can_feedback = bool(member and timezone.localtime(event.date).date() <= timezone.localdate() and Attendance.objects.filter(event=event, member=member).exists())
+    has_feedback = bool(member and EventFeedback.objects.filter(event=event, member=member).exists())
+    return render(request, "core/event_detail.html", {"event": event, "member": member, "registered": registered, "is_open": event.registration_open and event.date >= timezone.now(), "full": full, "rsvp_count": rsvp_count, "guest_count": guest_count, "can_feedback": can_feedback, "has_feedback": has_feedback})
 
 
-@login_required
+@capability_required("can_access_events")
 @require_POST
 def event_rsvp(request, event_id):
     member = get_object_or_404(Member, user=request.user)
@@ -393,6 +418,7 @@ def event_rsvp(request, event_id):
             messages.error(request, "This event has reached capacity.")
         else:
             EventRegistration.objects.create(member=member, event=event)
+            Notification.objects.create(recipient=request.user, title=f"RSVP confirmed: {event.title}", message=f"You are registered for {event.title}.", url=f"/events/{event.pk}/")
             messages.success(request, f"You are registered for {event.title}.")
     return redirect("event_detail", event_id=event.id)
 
@@ -431,7 +457,13 @@ def announcement_edit(request, announcement_id=None):
     announcement = get_object_or_404(Announcement, id=announcement_id) if announcement_id else None
     form = AnnouncementForm(request.POST or None, instance=announcement)
     if request.method == "POST" and form.is_valid():
+        is_new = announcement is None
+        changed = bool(form.changed_data)
         saved = form.save()
+        if is_new and saved.published:
+            _notify_members(f"New announcement: {saved.title}", saved.message[:250], "/home/")
+        elif changed and saved.published:
+            _notify_members(f"Announcement updated: {saved.title}", saved.message[:250], "/home/")
         messages.success(request, f"Announcement '{saved.title}' saved.")
         return redirect("announcements")
     return render(request, "core/announcement_form.html", {"form": form, "announcement": announcement})
@@ -534,17 +566,46 @@ def profile(request):
 
 @login_required
 def home(request):
-    upcoming = Event.objects.filter(date__gte=timezone.now()).order_by("date")
+    upcoming = Event.objects.filter(date__gte=timezone.now()).order_by("date")[:4]
     announcements = Announcement.objects.filter(published=True).select_related("event")[:20]
     unread = Message.objects.filter(recipient=request.user, is_read=False).count()
+    member = Member.objects.filter(user=request.user).first()
+    my_tasks = Task.objects.filter(assignees=member, status__in=["todo", "active"]).select_related("project").order_by("due_date", "priority")[:5] if member else Task.objects.none()
+    my_projects = Project.objects.filter(Q(members=member) | Q(leader=member)).distinct().order_by("status", "due_date")[:4] if member else Project.objects.none()
+    is_manager = _can_manage_projects(request.user)
+    admin_summary = {}
+    if is_manager:
+        admin_summary["upcoming_events"] = Event.objects.filter(date__gte=timezone.now()).count()
+    if has_capability(request.user, "can_manage_guests"):
+        admin_summary["pending_guests"] = Guest.objects.filter(status="pending").count()
+    if has_capability(request.user, "can_manage_members"):
+        admin_summary["pending_applications"] = JoinApplication.objects.filter(status="pending").count()
+    if has_capability(request.user, "can_manage_announcements"):
+        admin_summary["announcement_link"] = "/announcements/"
     return render(
         request,
         "core/home.html",
-        {"upcoming": upcoming, "announcements": announcements, "unread": unread},
+        {"upcoming": upcoming, "announcements": announcements, "unread": unread, "member": member, "my_tasks": my_tasks, "my_projects": my_projects, "dashboard_admin": bool(admin_summary), "admin_summary": admin_summary},
     )
 
 
 @login_required
+def manage_home(request):
+    allowed = any(has_capability(request.user, capability) for capability in (
+        "can_manage_members", "can_manage_events", "can_manage_guests", "can_scan",
+        "can_manage_announcements", "can_manage_permissions",
+    ))
+    if not allowed and not request.user.is_staff:
+        raise PermissionDenied
+    return render(request, "core/manage.html", {
+        "upcoming_event_count": Event.objects.filter(date__gte=timezone.now()).count() if has_capability(request.user, "can_manage_events") else 0,
+        "pending_guest_count": Guest.objects.filter(status="pending").count() if has_capability(request.user, "can_manage_guests") else 0,
+        "pending_application_count": JoinApplication.objects.filter(status="pending").count() if has_capability(request.user, "can_manage_members") else 0,
+        "member_count": Member.objects.count() if has_capability(request.user, "can_manage_members") else 0,
+    })
+
+
+@capability_required("can_access_directory")
 def directory(request):
     members = (
         Member.objects.select_related("user").prefetch_related("responsibilities")
@@ -558,7 +619,7 @@ def directory(request):
     return render(request, "core/directory.html", {"members": Paginator(members, 25).get_page(request.GET.get("page")), "query": query})
 
 
-@login_required
+@capability_required("can_access_messages")
 def inbox(request):
     msgs = (
         Message.objects.filter(Q(sender=request.user) | Q(recipient=request.user))
@@ -575,7 +636,7 @@ def inbox(request):
     return render(request, "core/inbox.html", {"conversations": list(seen.values())})
 
 
-@login_required
+@capability_required("can_access_messages")
 def conversation(request, user_id):
     other = get_object_or_404(User, id=user_id, member__isnull=False)
     if other == request.user:
@@ -648,3 +709,388 @@ def add_member(request):
         "core/add_member.html",
         {"error": error, "created": created, "values": values},
     )
+
+
+def _notify_members(title, message, url):
+    Notification.objects.bulk_create([
+        Notification(recipient_id=user_id, title=title, message=message, url=url)
+        for user_id in User.objects.filter(is_active=True, member__isnull=False).values_list("id", flat=True)
+    ])
+
+
+def about(request):
+    return render(request, "core/about.html", {"team_roles": Responsibility.objects.prefetch_related("members__user")})
+
+
+@never_cache
+def team(request):
+    team_members = Member.objects.filter(public_team_visible=True).select_related("user").prefetch_related("responsibilities").order_by("user__first_name", "user__last_name", "user__username")
+    return render(request, "core/team_public.html", {"team_members": team_members})
+
+
+def partner_list(request):
+    return render(request, "core/partners.html", {"partners": Partner.objects.filter(active=True)})
+
+
+def gallery(request):
+    return render(request, "core/gallery.html", {"items": GalleryItem.objects.filter(published=True)})
+
+
+def public_projects(request):
+    visible_members = Member.objects.filter(directory_visible=True).select_related("user")
+    projects = Project.objects.filter(public=True, status="completed").prefetch_related(Prefetch("members", queryset=visible_members, to_attr="public_members"), "tasks")
+    return render(request, "core/public_projects.html", {"projects": projects})
+
+
+def activity_list(request):
+    if request.user.is_authenticated and not has_capability(request.user, "can_access_events"):
+        raise PermissionDenied
+    events = Event.objects.order_by("-date")
+    return render(request, "core/activities.html", {"events": Paginator(events, 12).get_page(request.GET.get("page")), "today": timezone.now()})
+
+
+@capability_required("can_access_projects")
+def project_list(request):
+    project = None
+    form = ProjectForm()
+    if request.method == "POST":
+        if not _can_manage_projects(request.user):
+            raise PermissionDenied
+        form = ProjectForm(request.POST)
+        if form.is_valid():
+            project = form.save()
+            creator = Member.objects.filter(user=request.user).first()
+            if creator:
+                project.members.add(creator)
+            if not project.members.filter(pk=project.leader_id).exists() and project.leader_id:
+                project.members.add(project.leader)
+            messages.success(request, f"Project '{project.title}' created.")
+            return redirect("project_detail", project_id=project.pk)
+    projects = Project.objects.prefetch_related("members__user", "tasks").order_by("status", "due_date")
+    member = Member.objects.filter(user=request.user).first()
+    if not _can_manage_projects(request.user):
+        projects = projects.filter(Q(members=member) | Q(leader=member)).distinct() if member else projects.none()
+    return render(request, "core/projects.html", {"projects": projects, "form": form, "can_manage": _can_manage_projects(request.user)})
+
+
+@capability_required("can_access_projects")
+def project_detail(request, project_id):
+    project = get_object_or_404(Project.objects.prefetch_related("members__user", "tasks__assignees__user"), pk=project_id)
+    member = Member.objects.filter(user=request.user).first()
+    can_edit = _can_manage_projects(request.user) or bool(member and project.leader_id == member.pk)
+    if not can_edit and not project.members.filter(pk=getattr(member, "pk", None)).exists():
+        raise PermissionDenied
+    task_form = TaskForm()
+    if request.method == "POST":
+        if request.POST.get("action") == "status":
+            task = get_object_or_404(Task, pk=request.POST.get("task_id"), project=project)
+            if not can_edit and not task.assignees.filter(pk=getattr(member, "pk", None)).exists():
+                raise PermissionDenied
+            if request.POST.get("status") not in dict(Task.STATUS_CHOICES):
+                raise Http404
+            task.status = request.POST["status"]
+            task.save(update_fields=["status"])
+            return redirect("project_detail", project_id=project.pk)
+        if not can_edit:
+            raise PermissionDenied
+        task_form = TaskForm(request.POST)
+        if task_form.is_valid():
+            task = task_form.save(commit=False)
+            task.project = project
+            task.save()
+            task_form.save_m2m()
+            project.members.add(*task.assignees.all())
+            for assignee in task.assignees.select_related("user"):
+                Notification.objects.create(recipient=assignee.user, title=f"New task: {task.title}", message=f"Assigned in {project.title}", url=f"/projects/{project.pk}/")
+            messages.success(request, f"Task '{task.title}' added.")
+            return redirect("project_detail", project_id=project.pk)
+    return render(request, "core/project_detail.html", {"project": project, "task_form": task_form, "can_edit": can_edit, "today": timezone.localdate()})
+
+
+@capability_required("can_access_projects")
+def project_edit(request, project_id):
+    project = get_object_or_404(Project, pk=project_id)
+    member = Member.objects.filter(user=request.user).first()
+    if not (_can_manage_projects(request.user) or (member and project.leader_id == member.pk)):
+        raise PermissionDenied
+    form = ProjectForm(request.POST or None, instance=project)
+    if request.method == "POST" and form.is_valid():
+        saved = form.save()
+        if saved.leader_id:
+            saved.members.add(saved.leader)
+        messages.success(request, "Project updated.")
+        return redirect("project_detail", project_id=saved.pk)
+    return render(request, "core/simple_form.html", {"form": form, "title": "Edit project", "cancel_url": f"/projects/{project.pk}/"})
+
+
+@capability_required("can_access_projects")
+def task_list(request):
+    member = Member.objects.filter(user=request.user).first()
+    tasks = Task.objects.select_related("project").prefetch_related("assignees__user")
+    if not _can_manage_projects(request.user):
+        tasks = tasks.filter(assignees=member) if member else tasks.none()
+    return render(request, "core/tasks.html", {"tasks": tasks.order_by("status", "due_date"), "today": timezone.localdate()})
+
+
+@capability_required("can_access_calendar")
+def calendar(request):
+    view = request.GET.get("view", "month")
+    today = timezone.localdate()
+    month = today.replace(day=1)
+    week_date = today
+    try:
+        month = month.replace(year=int(request.GET.get("year", month.year)), month=int(request.GET.get("month", month.month)))
+    except (ValueError, TypeError):
+        pass
+    if view == "week":
+        try:
+            week_date = timezone.datetime.strptime(request.GET.get("date", today.isoformat()), "%Y-%m-%d").date()
+        except (ValueError, TypeError):
+            week_date = today
+        start_date = week_date - timezone.timedelta(days=week_date.weekday())
+        end_date = start_date + timezone.timedelta(days=7)
+        previous = start_date - timezone.timedelta(days=7)
+        next_period = start_date + timezone.timedelta(days=7)
+    else:
+        next_period = (month.replace(day=28) + timezone.timedelta(days=4)).replace(day=1)
+        previous = (month - timezone.timedelta(days=1)).replace(day=1)
+        start_date, end_date = month, next_period
+    start = timezone.make_aware(timezone.datetime.combine(start_date, timezone.datetime.min.time()))
+    end = timezone.make_aware(timezone.datetime.combine(end_date, timezone.datetime.min.time()))
+    entries = []
+    for event in Event.objects.filter(date__gte=start, date__lt=end).order_by("date"):
+        entries.append({"date": timezone.localtime(event.date).date(), "time": timezone.localtime(event.date).strftime("%H:%M"), "title": event.title, "kind": "Event", "url": f"/events/{event.pk}/", "place": event.place})
+    member = Member.objects.filter(user=request.user).first()
+    projects = Project.objects.filter(due_date__gte=start_date, due_date__lt=end_date).order_by("due_date")
+    if not _can_manage_projects(request.user):
+        projects = projects.filter(Q(members=member) | Q(leader=member)).distinct() if member else projects.none()
+    entries.extend({"date": p.due_date, "time": "", "title": f"{p.title} deadline", "kind": "Project", "url": f"/projects/{p.pk}/", "place": ""} for p in projects)
+    entries.sort(key=lambda item: (item["date"], item["time"], item["title"]))
+    return render(request, "core/calendar.html", {"month": month, "entries": entries, "previous": previous, "next": next_period, "view": view, "week_start": start_date, "week_end": end_date - timezone.timedelta(days=1)})
+
+
+@capability_required("can_access_notifications")
+def notifications(request):
+    member = Member.objects.filter(user=request.user).first()
+    today = timezone.localdate()
+    now = timezone.now()
+    if member:
+        upcoming = EventRegistration.objects.filter(member=member, event__date__gte=now, event__date__lte=now + timezone.timedelta(days=1)).select_related("event")
+        for registration in upcoming:
+            title = f"Event reminder: {registration.event.title}"
+            url = f"/events/{registration.event_id}/"
+            if not Notification.objects.filter(recipient=request.user, title=title, url=url, created_at__date=today).exists():
+                Notification.objects.create(recipient=request.user, title=title, message="Your event is coming up within 24 hours.", url=url)
+        due_tasks = Task.objects.filter(assignees=member, status__in=["todo", "active"], due_date__gte=today, due_date__lte=today + timezone.timedelta(days=3)).select_related("project").distinct()
+        for task in due_tasks:
+            title = f"Task reminder: {task.title}"
+            url = f"/projects/{task.project_id}/"
+            if not Notification.objects.filter(recipient=request.user, title=title, url=url, created_at__date=today).exists():
+                Notification.objects.create(recipient=request.user, title=title, message=f"Due {task.due_date:%d %b %Y} in {task.project.title}.", url=url)
+    if request.method == "POST":
+        action = request.POST.get("action")
+        qs = Notification.objects.filter(recipient=request.user)
+        if action == "read_all":
+            qs.filter(read_at__isnull=True).update(read_at=timezone.now())
+        else:
+            qs.filter(pk=request.POST.get("notification_id"), read_at__isnull=True).update(read_at=timezone.now())
+        return redirect("notifications")
+    return render(request, "core/notifications.html", {"notifications": Notification.objects.filter(recipient=request.user)[:100]})
+
+
+@capability_required("can_access_events")
+def submit_feedback(request, event_id):
+    event = get_object_or_404(Event, pk=event_id)
+    member = get_object_or_404(Member, user=request.user)
+    if event.date.date() > timezone.localdate() or not (Attendance.objects.filter(event=event, member=member).exists() or EventRegistration.objects.filter(event=event, member=member).exists()):
+        raise PermissionDenied
+    existing = EventFeedback.objects.filter(event=event, member=member).first()
+    form = EventFeedbackForm(request.POST or None, instance=existing)
+    if request.method == "POST" and form.is_valid():
+        feedback = form.save(commit=False)
+        feedback.event, feedback.member = event, member
+        feedback.save()
+        messages.success(request, "Thank you for sharing your feedback.")
+        return redirect("event_detail", event_id=event.pk)
+    return render(request, "core/simple_form.html", {"form": form, "title": f"Feedback: {event.title}", "cancel_url": f"/events/{event.pk}/"})
+
+
+@capability_required("can_manage_events")
+def feedback_report(request):
+    events = Event.objects.filter(feedback__isnull=False).distinct().prefetch_related("feedback__member__user")
+    if request.GET.get("format") == "csv":
+        response = HttpResponse(content_type="text/csv; charset=utf-8")
+        response["Content-Disposition"] = 'attachment; filename="orionex-event-feedback.csv"'
+        writer = csv.writer(response)
+        writer.writerow(["Event", "Member", "Rating", "Comments", "Submitted at"])
+        for event in events:
+            for item in event.feedback.all():
+                writer.writerow([_safe_csv_cell(event.title), _safe_csv_cell(str(item.member)), item.rating, _safe_csv_cell(item.comments), item.created_at.isoformat()])
+        return response
+    return render(request, "core/feedback_report.html", {"events": events})
+
+
+@capability_required("can_access_resources")
+def resources(request):
+    can_manage_resources = has_capability(request.user, "can_manage_members")
+    if request.method != "GET":
+        raise PermissionDenied
+    items = LearningResource.objects.select_related("contributor__user").order_by("-created_at", "-pk")
+    query = request.GET.get("q", "").strip()
+    if query:
+        items = items.filter(Q(title__icontains=query) | Q(description__icontains=query) | Q(topic__icontains=query))
+    return render(request, "core/resources.html", {"items": items, "query": query, "can_manage_resources": can_manage_resources})
+
+
+@capability_required("can_manage_members")
+def resource_add(request):
+    form = LearningResourceForm(request.POST or None, request.FILES or None)
+    if request.method == "POST" and form.is_valid():
+        resource = form.save(commit=False)
+        resource.contributor = Member.objects.filter(user=request.user).first()
+        resource.save()
+        messages.success(request, "Resource added to the library.")
+        return redirect("resources")
+    return render(request, "core/resource_form.html", {"form": form, "title": "Add a library resource", "cancel_url": "/resources/"})
+
+
+@capability_required("can_manage_members")
+def resource_edit(request, resource_id):
+    resource = get_object_or_404(LearningResource, pk=resource_id)
+    previous_file = resource.file
+    form = LearningResourceForm(request.POST or None, request.FILES or None, instance=resource)
+    if request.method == "POST" and form.is_valid():
+        saved = form.save()
+        if previous_file and previous_file.name != saved.file.name:
+            previous_file.delete(save=False)
+        messages.success(request, f"Resource '{saved.title}' updated.")
+        return redirect("resources")
+    return render(request, "core/resource_form.html", {"form": form, "title": "Edit library resource", "cancel_url": "/resources/", "resource": resource})
+
+
+@capability_required("can_manage_members")
+def resource_delete(request, resource_id):
+    resource = get_object_or_404(LearningResource, pk=resource_id)
+    if request.method == "POST":
+        title = resource.title
+        if resource.file:
+            resource.file.delete(save=False)
+        resource.delete()
+        messages.success(request, f"Resource '{title}' deleted.")
+        return redirect("resources")
+    return render(request, "core/confirm_delete.html", {
+        "title": "Delete library resource",
+        "object_name": resource.title,
+        "warning": "This permanently removes the resource and its uploaded file from the library.",
+        "cancel_url": "/resources/",
+    })
+
+
+@capability_required("can_access_resources")
+def resource_file(request, resource_id):
+    resource = get_object_or_404(LearningResource, pk=resource_id)
+    if not resource.file:
+        raise Http404
+    return FileResponse(resource.file.open("rb"), as_attachment=True)
+
+
+def apply_to_join(request):
+    form = JoinApplicationForm(request.POST or None)
+    submitted = False
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        submitted = True
+        form = JoinApplicationForm()
+    return render(request, "core/apply.html", {"form": form, "submitted": submitted})
+
+
+@capability_required("can_manage_members")
+def applications(request):
+    if request.method == "POST":
+        item = get_object_or_404(JoinApplication, pk=request.POST.get("application_id"))
+        status = request.POST.get("status")
+        if status not in {"accepted", "rejected", "pending"}:
+            raise Http404
+        item.status = status
+        item.save(update_fields=["status"])
+        if item.email:
+            send_mail(
+                f"Orionex membership application: {item.get_status_display()}",
+                f"Hello {item.first_name},\n\nYour application to join Orionex has been marked as {item.get_status_display().lower()}. The club team will follow up with you if more information is needed.\n",
+                None,
+                [item.email],
+                fail_silently=True,
+            )
+        messages.success(request, f"Application updated to {item.get_status_display().lower()}.")
+        return redirect("applications")
+    return render(request, "core/applications.html", {"applications": JoinApplication.objects.all()})
+
+
+@capability_required("can_manage_events")
+def analytics(request):
+    period = request.GET.get("period", "year")
+    today = timezone.localdate()
+    period_filters = {}
+    if period == "month":
+        month_start = today.replace(day=1)
+        month_end = (month_start.replace(day=28) + timezone.timedelta(days=4)).replace(day=1)
+        start = timezone.make_aware(timezone.datetime.combine(month_start, timezone.datetime.min.time()))
+        end = timezone.make_aware(timezone.datetime.combine(month_end, timezone.datetime.min.time()))
+        period_filters = {"event_start": start, "event_end": end, "start": start, "end": end}
+    elif period == "year":
+        year_start = today.replace(month=1, day=1)
+        year_end = year_start.replace(year=year_start.year + 1)
+        start = timezone.make_aware(timezone.datetime.combine(year_start, timezone.datetime.min.time()))
+        end = timezone.make_aware(timezone.datetime.combine(year_end, timezone.datetime.min.time()))
+        period_filters = {"event_start": start, "event_end": end, "start": start, "end": end}
+    else:
+        period = "all"
+    events = Event.objects.all()
+    registrations_qs = EventRegistration.objects.all()
+    attendance_qs = Attendance.objects.all()
+    guests_qs = Guest.objects.all()
+    tasks_qs = Task.objects.all()
+    projects_qs = Project.objects.all()
+    feedback_qs = EventFeedback.objects.all()
+    if period_filters:
+        events = events.filter(date__gte=period_filters["event_start"], date__lt=period_filters["event_end"])
+        registrations_qs = registrations_qs.filter(created_at__gte=period_filters["start"], created_at__lt=period_filters["end"])
+        attendance_qs = attendance_qs.filter(scanned_at__gte=period_filters["start"], scanned_at__lt=period_filters["end"])
+        guests_qs = guests_qs.filter(created_at__gte=period_filters["start"], created_at__lt=period_filters["end"])
+        tasks_qs = tasks_qs.filter(created_at__gte=period_filters["start"], created_at__lt=period_filters["end"])
+        projects_qs = projects_qs.filter(created_at__gte=period_filters["start"], created_at__lt=period_filters["end"])
+        feedback_qs = feedback_qs.filter(created_at__gte=period_filters["start"], created_at__lt=period_filters["end"])
+    total_events = events.count()
+    attendance = attendance_qs.count() + guests_qs.filter(checked_in_at__isnull=False).count()
+    registrations = registrations_qs.count() + guests_qs.filter(status="approved").count()
+    task_count = tasks_qs.count()
+    completed_tasks = tasks_qs.filter(status="done").count()
+    project_count = projects_qs.count()
+    completed_projects = projects_qs.filter(status="completed").count()
+    active_member_ids = set(attendance_qs.values_list("member_id", flat=True)) | set(registrations_qs.values_list("member_id", flat=True)) | set(tasks_qs.filter(status="done").values_list("assignees__id", flat=True))
+    active_member_ids.discard(None)
+    return render(request, "core/analytics.html", {"period": period, "total_events": total_events, "attendance": attendance, "registrations": registrations, "attendance_rate": round(attendance * 100 / registrations) if registrations else 0, "members": Member.objects.count(), "active_members": len(active_member_ids), "active_projects": projects_qs.exclude(status__in=["completed", "on_hold"]).count(), "project_count": project_count, "completed_projects": completed_projects, "project_rate": round(completed_projects * 100 / project_count) if project_count else 0, "task_count": task_count, "completed_tasks": completed_tasks, "task_rate": round(completed_tasks * 100 / task_count) if task_count else 0, "feedback_count": feedback_qs.count()})
+
+
+@capability_required("can_manage_events", "can_manage_members")
+def budget_tracker(request):
+    form = BudgetEntryForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        entry = form.save(commit=False)
+        entry.created_by = request.user
+        entry.save()
+        messages.success(request, "Budget entry saved.")
+        return redirect("budget_tracker")
+    year = request.GET.get("year", str(timezone.localdate().year))
+    entries = BudgetEntry.objects.all()
+    if year != "all":
+        try:
+            year_number = int(year)
+            entries = entries.filter(date__year=year_number)
+        except ValueError:
+            year = str(timezone.localdate().year)
+            entries = entries.filter(date__year=timezone.localdate().year)
+    totals = entries.aggregate(income=Sum("amount", filter=Q(entry_type="income")), expenses=Sum("amount", filter=Q(entry_type="expense")))
+    income = totals["income"] or 0
+    expenses = totals["expenses"] or 0
+    return render(request, "core/budget.html", {"form": form, "entries": entries, "year": year, "income": income, "expenses": expenses, "net": income - expenses, "years": BudgetEntry.objects.dates("date", "year", order="DESC")})

@@ -1,0 +1,12 @@
+{% extends 'core/base.html' %}
+{% block title %}Budget tracker{% endblock %}
+{% block body %}
+<main class="page">
+  <span class="eyebrow">Club operations</span><h1>Budget tracker</h1><p class="lede">Record income and expenses and review the club's financial activity.</p>
+  <div class="stat-strip"><div class="stat"><strong>{{ income }}</strong><span>Total income</span></div><div class="stat"><strong>{{ expenses }}</strong><span>Total expenses</span></div><div class="stat"><strong>{{ net }}</strong><span>Net balance (income less expenses)</span></div></div>
+  <p class="meta">*Use the same currency for all entries. Totals are shown without a currency symbol.</p>
+  <form method="get" class="toolbar" style="margin:20px 0"><label for="budget-year">Reporting year</label><select id="budget-year" name="year"><option value="all" {% if year == 'all' %}selected{% endif %}>All years</option>{% for option in years %}<option value="{{ option|date:'Y' }}" {% if year == option|date:'Y' %}selected{% endif %}>{{ option|date:'Y' }}</option>{% endfor %}</select><button class="button button-outline">Filter</button></form>
+  <div class="stack">{% for item in entries %}<article class="card toolbar" style="justify-content:space-between"><div><span class="badge {% if item.entry_type == 'income' %}badge-approved{% else %}badge-pending{% endif %}">{{ item.get_entry_type_display }}</span><h3 style="margin-top:9px">{{ item.category }}</h3><p>{{ item.description }}</p><span class="meta">{{ item.date|date:'d M Y' }}</span></div><strong>{{ item.amount }}</strong></article>{% empty %}<div class="empty">No budget entries for this period.</div>{% endfor %}</div>
+  <section class="card form-card" style="margin:32px auto"><h2>Add an entry</h2><form method="post">{% csrf_token %}{{ form.as_p }}<button class="button button-glow">Save entry</button></form></section>
+</main>
+{% endblock %}

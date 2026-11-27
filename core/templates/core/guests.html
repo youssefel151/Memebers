@@ -5,12 +5,12 @@
   <span class="eyebrow">Registration desk</span>
   <h1>Guest requests</h1>
   <p class="lede">Review guest requests and check attendance by event.</p>
-  <form method="get" class="toolbar" role="search" style="margin-top:24px">
+  <form method="get" class="toolbar guest-search" role="search" style="margin-top:24px">
     <label class="hp" for="guest-query">Search guest requests</label>
     <input id="guest-query" type="search" name="q" value="{{ query }}" placeholder="Search name, email, phone">
     <select name="event" aria-label="Filter by event"><option value="">All events</option>{% for e in events %}<option value="{{ e.id }}" {% if event_filter == e.id|stringformat:"s" %}selected{% endif %}>{{ e.title }}</option>{% endfor %}</select>
     <select name="status" aria-label="Filter by status"><option value="">All statuses</option><option value="pending" {% if status_filter == "pending" %}selected{% endif %}>Pending</option><option value="approved" {% if status_filter == "approved" %}selected{% endif %}>Approved</option><option value="rejected" {% if status_filter == "rejected" %}selected{% endif %}>Declined</option></select>
-    <button class="button" type="submit">Filter</button><a class="button button-outline" href="/guests/">Clear</a>
+    <button class="button button-outline" type="submit">Filter</button><a class="button button-outline search-clear" href="/guests/">Clear</a>
   </form>
   <div class="stack" style="margin-top:24px">
     {% for group in event_groups %}

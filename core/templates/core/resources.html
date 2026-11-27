@@ -1,0 +1,13 @@
+{% extends 'core/base.html' %}
+{% block title %}Learning library{% endblock %}
+{% block body %}
+<main class="page">
+  <header class="roster-header"><div><span class="eyebrow">Learn from one another</span><h1>Learning library</h1></div>{% if can_manage_resources %}<a class="button button-glow" href="{% url 'resource_add' %}">Add new resource +</a>{% endif %}</header>
+  <p class="lede">Useful guides, slide decks, videos, courses, and references shared by members.</p>
+  <form method="get" class="toolbar site-search resource-search" role="search" style="margin:22px 0"><input type="search" name="q" value="{{ query }}" placeholder="Search resources" aria-label="Search resources"><button class="button button-outline" type="submit">Search</button></form>
+  <div class="grid">
+    {% for item in items %}<article class="card"><span class="badge">{{ item.topic|default:'Resource' }}</span><h2 style="margin-top:14px">{{ item.title }}</h2><p>{{ item.description|linebreaksbr }}</p>{% if item.file %}<a class="button button-small" href="{% url 'resource_file' item.id %}">Download file</a>{% endif %}{% if item.url %}<a class="button button-small button-outline" href="{{ item.url }}" target="_blank" rel="noopener noreferrer">Open link ↗</a>{% endif %}{% if can_manage_resources %}<div class="toolbar" style="margin-top:14px"><a class="button button-small button-outline" href="{% url 'resource_edit' item.id %}">Edit</a><a class="button button-small button-outline" href="{% url 'resource_delete' item.id %}">Delete</a></div>{% endif %}<p class="meta" style="margin-top:12px">Shared by {% if item.contributor %}{{ item.contributor.user.get_full_name|default:item.contributor.user.username }}{% else %}Orionex{% endif %}</p></article>
+    {% empty %}<div class="empty">No resources found. Share the first one below.</div>{% endfor %}
+  </div>
+</main>
+{% endblock %}

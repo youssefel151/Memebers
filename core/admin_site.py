@@ -4,9 +4,9 @@ from django.contrib.auth.models import Group, User
 
 
 class OrionexAdminSite(AdminSite):
-    site_header = "Orionex administration"
-    site_title = "Orionex admin"
-    index_title = "Administration"
+    site_header = "Orionex control room"
+    site_title = "Orionex control room"
+    index_title = "Manage your club"
 
     def has_permission(self, request):
         # App capabilities are managed in the member roster. Django Admin is

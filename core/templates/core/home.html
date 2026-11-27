@@ -1,1 +1,60 @@
-{% extends 'core/base.html' %}{% block title %}Community overview{% endblock %}{% block body %}<main class="page"><span class="eyebrow">Your Orionex space</span><h1>Good to see you, {{ user.first_name|default:user.username }}.</h1><p class="lede">Your community, conversations, and what's coming up — all in one place.</p><div class="section-head"><div><span class="eyebrow">Save the date</span><h2>Upcoming events</h2></div></div><div class="grid">{% for e in upcoming %}<article class="card event-card"><div class="event-date">{{ e.date|date:"D, d M · H:i" }}</div><h3>{{ e.title }}</h3>{% if e.place %}<p class="meta">Location:  &nbsp;{{ e.place }}</p>{% endif %}</article>{% empty %}<div class="empty" style="grid-column:1/-1">No upcoming events just yet.</div>{% endfor %}</div><div class="section-head"><div><span class="eyebrow">From the community</span><h2>Latest announcements</h2></div></div><div class="stack">{% for a in announcements %}<article class="card"><h3>{{ a.title }}</h3><p>{{ a.message|linebreaksbr }}</p><div class="meta">{{ a.created_at|date:"d M Y · H:i" }}{% if a.event %} &nbsp;·&nbsp; {{ a.event.title }}{% endif %}</div></article>{% empty %}<div class="empty">No announcements yet. Check back soon.</div>{% endfor %}</div></main>{% endblock %}
+{% extends 'core/base.html' %}
+{% block title %}Home{% endblock %}
+{% block body %}
+<main class="page dashboard-page">
+  <section class="dashboard-welcome">
+    <div><span class="eyebrow">Your Orionex space</span><h1>Welcome, {{ user.first_name|default:user.username }}.</h1><p class="lede">Here are the next things you can do.</p></div>
+    <a class="button button-glow" href="/profile/">View my profile</a>
+  </section>
+
+  <section class="dashboard-quicklinks" aria-label="Quick links">
+    {% if capabilities.can_access_projects %}<a class="quicklink-card" href="/tasks/"><span class="quicklink-icon">✓</span><span><b>My tasks</b><small>See assigned work</small></span></a>{% endif %}
+    {% if capabilities.can_access_calendar %}<a class="quicklink-card" href="/calendar/"><span class="quicklink-icon">▦</span><span><b>Calendar</b><small>Events and deadlines</small></span></a>{% endif %}
+    {% if capabilities.can_access_messages %}<a class="quicklink-card" href="/messages/"><span class="quicklink-icon">✉</span><span><b>Messages</b><small>{% if unread %}{{ unread }} unread{% else %}Catch up with members{% endif %}</small></span></a>{% endif %}
+  </section>
+
+  {% if dashboard_admin %}
+  <section class="dashboard-admin card">
+    <div class="dashboard-section-heading"><div><span class="eyebrow">Staff tools</span><h2>Manage Orionex</h2></div></div>
+    <div class="dashboard-admin-links">
+      {% if capabilities.can_manage_events %}<a href="/events/">Manage events <span>{{ admin_summary.upcoming_events }} upcoming</span></a><a href="/analytics/">View reports</a><a href="/budget/">Track budget</a><a href="/event-feedback/">Review feedback</a>{% endif %}
+      {% if capabilities.can_scan %}<a href="/scan/">Check in attendees</a>{% endif %}
+      {% if capabilities.can_manage_guests %}<a href="/guests/">Guest requests <span>{{ admin_summary.pending_guests }} pending</span></a>{% endif %}
+      {% if capabilities.can_manage_announcements %}<a href="/announcements/">Announcements</a>{% endif %}
+      {% if capabilities.can_manage_members %}<a href="/members/">Manage members</a><a href="/applications/">Join applications <span>{{ admin_summary.pending_applications }} pending</span></a>{% endif %}
+      {% if capabilities.can_manage_permissions %}<a href="/responsibilities/">Team responsibilities</a>{% endif %}
+    </div>
+  </section>
+  {% endif %}
+
+  <div class="dashboard-columns">
+    {% if capabilities.can_access_projects %}<section>
+      <div class="dashboard-section-heading"><div><span class="eyebrow">Your work</span><h2>Tasks to do</h2></div><a class="text-link" href="/tasks/">All tasks →</a></div>
+      <div class="stack">
+        {% for task in my_tasks %}<a class="card dashboard-list-card" href="/projects/{{ task.project_id }}/"><div><b>{{ task.title }}</b><span class="meta">{{ task.project.title }}{% if task.due_date %} · Due {{ task.due_date|date:'d M' }}{% endif %}</span></div><span class="badge">{{ task.get_status_display }}</span></a>
+        {% empty %}<div class="empty">No open tasks assigned to you.</div>{% endfor %}
+      </div>
+      <div class="dashboard-section-heading dashboard-subheading"><div><span class="eyebrow">Teamwork</span><h2>Your projects</h2></div><a class="text-link" href="/projects/">All projects →</a></div>
+      <div class="stack">
+        {% for project in my_projects %}<a class="card dashboard-list-card" href="/projects/{{ project.id }}/"><div><b>{{ project.title }}</b><span class="meta">{{ project.tasks.count }} tasks{% if project.due_date %} · Due {{ project.due_date|date:'d M Y' }}{% endif %}</span></div><span class="badge">{{ project.get_status_display }}</span></a>
+        {% empty %}<div class="empty">You're not on a project yet.</div>{% endfor %}
+      </div>
+    </section>{% endif %}
+
+    <section>
+      {% if capabilities.can_access_events %}
+      <div class="dashboard-section-heading"><div><span class="eyebrow">Coming up</span><h2>Events</h2></div><a class="text-link" href="/activities/">All events →</a></div>
+      <div class="stack">
+        {% for event in upcoming %}<a class="card dashboard-list-card dashboard-event-card" href="/events/{{ event.id }}/"><div class="dashboard-event-date">{{ event.date|date:'D' }}<b>{{ event.date|date:'d' }}</b></div><div><b>{{ event.title }}</b><span class="meta">{{ event.date|date:'M Y · H:i' }}{% if event.place %} · {{ event.place }}{% endif %}</span></div></a>
+        {% empty %}<div class="empty">No upcoming events.</div>{% endfor %}
+      </div>
+      {% endif %}
+      <div class="dashboard-section-heading dashboard-subheading"><div><span class="eyebrow">Updates</span><h2>Announcements</h2></div></div>
+      <div class="stack">
+        {% for item in announcements|slice:':3' %}<article class="card dashboard-announcement"><b>{{ item.title }}</b><p>{{ item.message|truncatewords:24 }}</p><span class="meta">{{ item.created_at|date:'d M Y' }}</span></article>
+        {% empty %}<div class="empty">No new announcements.</div>{% endfor %}
+      </div>
+    </section>
+  </div>
+</main>
+{% endblock %}

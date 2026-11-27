@@ -1,0 +1,21 @@
+{% extends 'core/base.html' %}
+{% block title %}{{ title }}{% endblock %}
+{% block body %}
+<main class="page page-narrow">
+  <a href="{{ cancel_url }}" class="meta">← Back to the library</a>
+  <section class="card form-card" style="margin-top:22px">
+    <span class="eyebrow">Library management</span>
+    <h1>{{ title }}</h1>
+    <p class="meta">Add a link or upload a file. You only need to provide one.</p>
+    {% if resource and resource.file %}<p class="meta">Current file: <a href="{% url 'resource_file' resource.id %}">{{ resource.file.name }}</a></p>{% endif %}
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+      {{ form.as_p }}
+      <div class="toolbar">
+        <button class="button button-glow" type="submit">Save resource</button>
+        <a class="button button-outline" href="{{ cancel_url }}">Cancel</a>
+      </div>
+    </form>
+  </section>
+</main>
+{% endblock %}

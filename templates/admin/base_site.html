@@ -1,1 +1,36 @@
-{% extends "admin/base_site.html" %}{% load static %}{% block extrastyle %}{{ block.super }}<link rel="stylesheet" href="{% static 'core/admin-theme.css' %}"><link rel="icon" type="image/svg+xml" href="{% static 'core/orionex-mark.svg' %}">{% endblock %}{% block extrahead %}{{ block.super }}<script defer src="{% static 'core/language.js' %}"></script><script>try{if(localStorage.getItem('orionex-theme')==='dark')document.documentElement.dataset.theme='dark'}catch(e){}</script>{% endblock %}{% block userlinks %}<button type="button" class="theme-toggle" aria-label="Switch theme" title="Switch theme"><svg class="icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"></path></svg><svg class="icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.4 15.5A8.5 8.5 0 0 1 8.5 3.6 8.5 8.5 0 1 0 20.4 15.5Z"></path></svg></button> {{ block.super }}{% endblock %}{% block footer %}{{ block.super }}<label class="language-picker" for="site-language"><span>Language</span><select id="site-language" aria-label="Language"><option value="en">English</option><option value="fr">Français</option></select></label><script>(function(){var b=document.querySelector('.theme-toggle');if(!b)return;function sync(){var d=document.documentElement.dataset.theme==='dark',l=d?'Switch to light mode':'Switch to dark mode';b.setAttribute('aria-label',l);b.title=l}sync();b.addEventListener('click',function(){var n=document.documentElement.dataset.theme==='dark'?'light':'dark';if(n==='dark')document.documentElement.dataset.theme='dark';else delete document.documentElement.dataset.theme;try{localStorage.setItem('orionex-theme',n)}catch(e){}sync()})})();</script>{% endblock %}
+{% extends "admin/base.html" %}
+{% load i18n static %}
+{% block title %}{% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
+{% block branding %}<div id="site-name"><a href="{% url 'admin:index' %}">{{ site_header|default:_('Django administration') }}</a></div>{% endblock %}
+{% block nav-global %}{% endblock %}
+{% block extrastyle %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'core/admin-theme.css' %}">
+  <link rel="icon" type="image/svg+xml" href="{% static 'core/orionex-mark.svg' %}">
+{% endblock %}
+{% block extrahead %}
+  {{ block.super }}
+  <script defer src="{% static 'core/language.js' %}"></script>
+  <script>try{if(localStorage.getItem('orionex-theme')==='dark')document.documentElement.dataset.theme='dark'}catch(e){}</script>
+{% endblock %}
+{% block userlinks %}
+  <button type="button" class="theme-toggle" aria-label="Switch theme" title="Switch theme"><svg class="icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"></path></svg><svg class="icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.4 15.5A8.5 8.5 0 0 1 8.5 3.6 8.5 8.5 0 1 0 20.4 15.5Z"></path></svg></button>
+  <button type="button" class="language-quick-toggle" aria-label="Switch language">EN</button>
+  {{ block.super }}
+{% endblock %}
+{% block footer %}
+  {{ block.super }}
+  <label class="language-picker" for="site-language"><span>Language</span><select id="site-language" aria-label="Language"><option value="en">English</option><option value="fr">Français</option></select></label>
+  <script>
+    (() => {
+      const themeButton=document.querySelector('.theme-toggle');
+      const languageButton=document.querySelector('.language-quick-toggle');
+      const languagePicker=document.getElementById('site-language');
+      const syncTheme=()=>{const dark=document.documentElement.dataset.theme==='dark';const label=dark?'Switch to light mode':'Switch to dark mode';themeButton.setAttribute('aria-label',label);themeButton.title=label};
+      const syncLanguage=()=>{const french=languagePicker.value==='fr';languageButton.textContent=french?'FR':'EN';const label=french?'Passer le site en anglais':'Switch the site to French';languageButton.setAttribute('aria-label',label);languageButton.title=label};
+      syncTheme();syncLanguage();document.addEventListener('DOMContentLoaded',syncLanguage);languagePicker.addEventListener('change',syncLanguage);
+      themeButton.addEventListener('click',()=>{const next=document.documentElement.dataset.theme==='dark'?'light':'dark';if(next==='dark')document.documentElement.dataset.theme='dark';else delete document.documentElement.dataset.theme;try{localStorage.setItem('orionex-theme',next)}catch(e){}syncTheme()});
+      languageButton.addEventListener('click',()=>{languagePicker.value=languagePicker.value==='fr'?'en':'fr';languagePicker.dispatchEvent(new Event('change',{bubbles:true}))});
+    })();
+  </script>
+{% endblock %}

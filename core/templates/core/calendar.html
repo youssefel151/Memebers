@@ -1,0 +1,18 @@
+{% extends 'core/base.html' %}
+{% block title %}Club calendar{% endblock %}
+{% block body %}
+<main class="page">
+  <span class="eyebrow">Shared schedule</span>
+  <div class="section-head calendar-heading">
+    <div><h1>{% if view == 'week' %}{{ week_start|date:'d M' }} – {{ week_end|date:'d M Y' }}{% else %}{{ month|date:'F Y' }}{% endif %}</h1><p class="lede">Club events and your project deadlines in one place.</p></div>
+    <div class="toolbar calendar-nav" aria-label="Calendar navigation">
+      {% if view == 'week' %}<a class="button button-outline" href="?view=week&date={{ previous|date:'Y-m-d' }}">← Previous</a><a class="button button-outline" href="?view=week&date={{ next|date:'Y-m-d' }}">Next →</a><a class="button button-glow" href="?year={{ month.year }}&month={{ month.month }}">Month view</a>
+      {% else %}<a class="button button-outline" href="?year={{ previous.year }}&month={{ previous.month }}">← Previous</a><a class="button button-outline" href="?year={{ next.year }}&month={{ next.month }}">Next →</a><a class="button button-glow" href="?view=week">This week</a>{% endif %}
+    </div>
+  </div>
+  <div class="stack">
+    {% for item in entries %}<article class="card calendar-entry"><div class="calendar-entry-date"><span class="eyebrow">{{ item.date|date:'D' }}</span><h2>{{ item.date|date:'d' }}</h2><span class="meta">{{ item.date|date:'M' }}</span></div><div class="calendar-entry-content"><span class="badge">{{ item.kind }}</span><h3><a href="{{ item.url }}">{{ item.title }}</a></h3>{% if item.time or item.place %}<p class="meta">{% if item.time %}{{ item.time }}{% endif %}{% if item.place %}{% if item.time %} · {% endif %}{{ item.place }}{% endif %}</p>{% endif %}</div></article>
+    {% empty %}<div class="empty">Nothing scheduled for this {{ view }}.</div>{% endfor %}
+  </div>
+</main>
+{% endblock %}

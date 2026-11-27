@@ -1,0 +1,66 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+{% block content %}
+<main class="orionex-admin-home">
+  <section class="admin-welcome">
+    <div>
+      <p class="admin-kicker">ORIONEX CONTROL ROOM</p>
+      <h1>Good to see you, {{ user.get_short_name|default:user.username }}.</h1>
+      <p>Choose a tool below to manage club activity, members, and shared content.</p>
+    </div>
+    <div class="admin-shortcuts">
+      <a class="admin-shortcut-primary" href="/manage/">Management home</a>
+      <a href="/">View public website</a>
+    </div>
+  </section>
+
+  <section class="admin-tools" aria-labelledby="admin-tools-title">
+    <div class="admin-tools-heading">
+      <div><p class="admin-kicker">QUICK ACCESS</p><h2 id="admin-tools-title">Your tools</h2></div>
+      <label class="admin-search"><span class="visually-hidden">Search administration tools</span><input type="search" id="admin-tool-search" placeholder="Search tools…" autocomplete="off"></label>
+    </div>
+    <div class="admin-app-grid" id="admin-app-grid">
+      {% for app in app_list %}
+      <section class="admin-app-card" data-search="{{ app.name|lower }}">
+        <header><h3>{{ app.name }}</h3><a href="{{ app.app_url }}">Open section →</a></header>
+        <div class="admin-model-list">
+          {% for model in app.models %}
+          <article class="admin-model-card" data-search="{{ model.name|lower }} {{ app.name|lower }}">
+            <a class="admin-model-name" href="{% if model.admin_url %}{{ model.admin_url }}{% else %}{{ model.add_url }}{% endif %}">{{ model.name }}</a>
+            <div class="admin-model-actions">
+              {% if model.admin_url %}<a href="{{ model.admin_url }}">View</a>{% endif %}
+              {% if model.add_url %}<a href="{{ model.add_url }}">Add new</a>{% endif %}
+            </div>
+          </article>
+          {% endfor %}
+        </div>
+      </section>
+      {% empty %}<p class="admin-no-results">No administration tools are available for this account.</p>{% endfor %}
+    </div>
+    <p class="admin-no-results" id="admin-no-results" hidden>No tools match that search. Try another word.</p>
+  </section>
+</main>
+<script>
+  (() => {
+    const search = document.getElementById('admin-tool-search');
+    const cards = [...document.querySelectorAll('.admin-model-card')];
+    const apps = [...document.querySelectorAll('.admin-app-card')];
+    const empty = document.getElementById('admin-no-results');
+    if (!search) return;
+    search.addEventListener('input', () => {
+      const query = search.value.trim().toLowerCase();
+      let visible = 0;
+      apps.forEach((app) => {
+        let appVisible = false;
+        app.querySelectorAll('.admin-model-card').forEach((card) => {
+          const show = !query || card.dataset.search.includes(query) || app.dataset.search.includes(query);
+          card.hidden = !show;
+          if (show) { appVisible = true; visible += 1; }
+        });
+        app.hidden = !appVisible;
+      });
+      empty.hidden = visible > 0;
+    });
+  })();
+</script>
+{% endblock %}

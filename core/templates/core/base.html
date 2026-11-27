@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <script>try{if(localStorage.getItem('orionex-theme')==='dark')document.documentElement.dataset.theme='dark'}catch(e){}</script>
-  <link rel="stylesheet" href="{% static 'core/site.css' %}">
+  <link rel="stylesheet" href="{% static 'core/site.css' %}?v=french-hero-two-lines-1">
   <script defer src="{% static 'core/language.js' %}"></script>
   {% block head %}{% endblock %}
 </head>
@@ -27,30 +27,35 @@
       </a>
       <nav class="nav-links" id="main-navigation" aria-label="Main navigation">
         {% if user.is_authenticated %}
-          <a href="/home/" class="nav-item {% if request.path == '/home/' %}active{% endif %}">Overview</a>
-          <details class="nav-menu {% if request.path == '/directory/' or '/messages/' in request.path or request.path == '/members/' or '/responsibilities/' in request.path %}active{% endif %}">
+          <a href="/home/" class="nav-item {% if request.path == '/home/' %}active{% endif %}">Home</a>
+          <a href="/activities/" class="nav-item {% if request.path == '/activities/' %}active{% endif %}">Events</a>
+          {% if capabilities.can_access_projects or capabilities.can_access_calendar %}<details class="nav-menu {% if '/projects/' in request.path or request.path == '/tasks/' or request.path == '/calendar/' %}active{% endif %}">
+            <summary>My work</summary>
+            <div class="nav-dropdown">{% if capabilities.can_access_projects %}<a href="/projects/">Projects</a><a href="/tasks/">My tasks</a>{% endif %}{% if capabilities.can_access_calendar %}<a href="/calendar/">Calendar</a>{% endif %}</div>
+          </details>{% endif %}
+          {% if capabilities.can_access_directory or capabilities.can_access_messages or capabilities.can_access_resources or capabilities.can_access_notifications %}<details class="nav-menu {% if request.path == '/directory/' or '/messages/' in request.path or request.path == '/resources/' %}active{% endif %}">
             <summary>Community</summary>
-            <div class="nav-dropdown">
-              <a href="/directory/">Member directory</a>
-              <a href="/messages/">Messages{% if unread %}<span class="badge">{{ unread }}</span>{% endif %}</a>
-              {% if capabilities.can_manage_members %}<a href="/members/">Member roster</a>{% endif %}
+            <div class="nav-dropdown">{% if capabilities.can_access_directory %}<a href="/directory/">Member directory</a>{% endif %}{% if capabilities.can_access_messages %}<a href="/messages/">Messages{% if unread %}<span class="badge">{{ unread }}</span>{% endif %}</a>{% endif %}{% if capabilities.can_access_resources %}<a href="/resources/">Learning library</a>{% endif %}{% if capabilities.can_access_notifications %}<a href="/notifications/">Notifications{% if notification_unread %}<span class="badge">{{ notification_unread }}</span>{% endif %}</a>{% endif %}</div>
+          </details>{% endif %}
+          {% if capabilities.can_manage_events or capabilities.can_manage_guests or capabilities.can_scan or capabilities.can_manage_announcements or capabilities.can_manage_members or capabilities.can_manage_permissions %}
+          <details class="nav-menu {% if request.path == '/manage/' or '/events/' in request.path or request.path == '/scan/' or request.path == '/guests/' or '/announcements/' in request.path or request.path == '/analytics/' or request.path == '/budget/' or request.path == '/event-feedback/' or request.path == '/applications/' or request.path == '/members/' or '/responsibilities/' in request.path %}active{% endif %}">
+            <summary>Manage</summary>
+            <div class="nav-dropdown nav-dropdown-right nav-dropdown-scroll">
+              <a href="/manage/">Management home</a>
+              {% if capabilities.can_manage_events %}<span class="nav-dropdown-label">Events</span><a href="/events/">Manage events</a><a href="/event-feedback/">Feedback</a><a href="/analytics/">Reports</a><a href="/budget/">Budget</a>{% endif %}
+              {% if capabilities.can_scan %}<a href="/scan/">Check-in scanner</a>{% endif %}
+              {% if capabilities.can_manage_guests %}<a href="/guests/">Guest requests</a>{% endif %}
+              {% if capabilities.can_manage_announcements %}<span class="nav-dropdown-label">Community</span><a href="/announcements/">Announcements</a>{% endif %}
+              {% if capabilities.can_manage_members %}<span class="nav-dropdown-label">Members</span><a href="/members/">Member roster</a><a href="/applications/">Join applications</a>{% endif %}
               {% if capabilities.can_manage_permissions %}<a href="/responsibilities/">Responsibilities</a>{% endif %}
             </div>
           </details>
-          {% if capabilities.can_manage_events or capabilities.can_manage_guests or capabilities.can_scan or capabilities.can_manage_announcements %}
-          <details class="nav-menu {% if '/events/' in request.path or request.path == '/scan/' or request.path == '/guests/' or '/announcements/' in request.path %}active{% endif %}">
-              <summary>Event desk</summary>
-              <div class="nav-dropdown nav-dropdown-right">
-                {% if capabilities.can_manage_events %}<a href="/events/">Events &amp; availability</a>{% endif %}
-                {% if capabilities.can_scan %}<a href="/scan/">Check-in scanner</a>{% endif %}
-                {% if capabilities.can_manage_guests %}<a href="/guests/">Guest requests</a>{% endif %}
-                {% if capabilities.can_manage_announcements %}<a href="/announcements/">Announcements</a>{% endif %}
-              </div>
-            </details>
           {% endif %}
-          <a href="/profile/" class="nav-item {% if request.path == '/profile/' %}active{% endif %}">Profile</a>
+          <a href="/profile/" class="nav-item {% if request.path == '/profile/' %}active{% endif %}">My profile</a>
         {% else %}
-          <a href="/#events" class="nav-item">Events</a>
+          {% if capabilities.can_access_events %}<a href="/activities/" class="nav-item {% if request.path == '/activities/' %}active{% endif %}">Events</a>{% endif %}
+          <details class="nav-menu"><summary>Explore</summary><div class="nav-dropdown nav-dropdown-right"><a href="/about/">About Orionex</a><a href="/team/">Our team</a><a href="/projects/showcase/">Project showcase</a><a href="/gallery/">Gallery</a><a href="/partners/">Partners</a></div></details>
+          <a href="/apply/" class="nav-item">Join Orionex</a>
           <a href="/login/" class="nav-cta">Member sign in</a>
         {% endif %}
       </nav>
@@ -58,6 +63,8 @@
         <svg class="icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"></path></svg>
         <svg class="icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.4 15.5A8.5 8.5 0 0 1 8.5 3.6 8.5 8.5 0 1 0 20.4 15.5Z"></path></svg>
       </button>
+      {% if user.is_authenticated and capabilities.can_access_notifications %}<a class="notification-nav-button" href="/notifications/" aria-label="Notifications{% if notification_unread %}, {{ notification_unread }} unread{% endif %}" title="Notifications"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg>{% if notification_unread %}<span class="notification-nav-count">{% if notification_unread > 9 %}9+{% else %}{{ notification_unread }}{% endif %}</span>{% endif %}</a>{% endif %}
+      <button type="button" class="language-quick-toggle" aria-label="Switch language" title="Switch language">EN</button>
       {% if user.is_authenticated %}<span class="nav-user">{{ user.first_name|default:user.username }}</span>{% endif %}
     </div>
   </header>
@@ -105,6 +112,23 @@
       else delete document.documentElement.dataset.theme;
       try { localStorage.setItem('orionex-theme', nextTheme); } catch (e) {}
       syncThemeControl();
+    });
+    const languageToggle = document.querySelector('.language-quick-toggle');
+    const languagePicker = document.getElementById('site-language');
+    const syncLanguageToggle = () => {
+      let language = languagePicker ? languagePicker.value : 'en';
+      language = language === 'fr' ? 'fr' : 'en';
+      languageToggle.textContent = language.toUpperCase();
+      const label = language === 'fr' ? 'Passer le site en anglais' : 'Switch the site to French';
+      languageToggle.setAttribute('aria-label', label);
+      languageToggle.title = label;
+    };
+    syncLanguageToggle();
+    document.addEventListener('DOMContentLoaded', syncLanguageToggle);
+    languagePicker.addEventListener('change', syncLanguageToggle);
+    languageToggle.addEventListener('click', () => {
+      languagePicker.value = languagePicker.value === 'fr' ? 'en' : 'fr';
+      languagePicker.dispatchEvent(new Event('change', { bubbles: true }));
     });
     document.querySelectorAll('.toast').forEach((toast) => {
       const dismiss = () => { toast.classList.add('toast-hiding'); window.setTimeout(() => toast.remove(), 220); };

@@ -12,6 +12,7 @@ venv/
 
 # Local data and generated deployment assets
 staticfiles/
+media/
 *.sqlite3-journal
 
 # Editor and operating system files

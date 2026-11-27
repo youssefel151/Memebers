@@ -1,0 +1,10 @@
+{% extends 'core/base.html' %}
+{% block title %}Project showcase{% endblock %}
+{% block body %}
+<main class="page"><span class="eyebrow">What we're building</span><h1>Project showcase</h1><p class="lede">A look at work Orionex teams have completed together.</p>
+  <div class="grid">
+    {% for project in projects %}<article class="card"><span class="badge badge-approved">Completed</span><h2 style="margin-top:14px">{{ project.title }}</h2><p>{{ project.description|linebreaksbr }}</p>{% if project.objectives %}<p class="meta"><b>Goals</b><br>{{ project.objectives|linebreaksbr }}</p>{% endif %}<p class="meta">Team: {% for member in project.public_members %}{{ member.user.get_full_name|default:member.user.username }}{% if not forloop.last %}, {% endif %}{% empty %}Orionex members{% endfor %}</p></article>
+    {% empty %}<div class="empty">Completed projects will appear here as teams share their work.</div>{% endfor %}
+  </div><p style="margin-top:28px"><a class="button button-outline" href="/about/">About the club</a></p>
+</main>
+{% endblock %}
