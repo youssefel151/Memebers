@@ -7,6 +7,7 @@ import csv
 import qrcode
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
+from django.contrib.auth.password_validation import validate_password
 from django.contrib import messages
 from django.core.exceptions import ValidationError, PermissionDenied
 from django.core.validators import validate_email
@@ -667,6 +668,8 @@ def add_member(request):
         last = request.POST.get("last_name", "").strip()[:150]
         email = request.POST.get("email", "").strip().lower()
         phone = request.POST.get("phone", "").strip()[:30]
+        initial_password = request.POST.get("initial_password", "")
+        password_confirmation = request.POST.get("password_confirmation", "")
         values = {"first_name": first, "last_name": last, "email": email, "phone": phone}
 
         try:
@@ -681,28 +684,42 @@ def add_member(request):
             error = "Please enter a valid email address."
         elif User.objects.filter(username__iexact=email).exists():
             error = "A member with this email already exists."
+        elif bool(initial_password) != bool(password_confirmation):
+            error = "Enter and confirm the initial password, or leave both password fields blank."
+        elif initial_password and initial_password != password_confirmation:
+            error = "The passwords do not match."
         else:
-            user = User.objects.create_user(
-                username=email,
-                email=email,
-                password=secrets.token_urlsafe(32),
-                first_name=first,
-                last_name=last,
-            )
-            Member.objects.create(user=user, phone=phone)
-            from django.contrib.auth.tokens import default_token_generator
-            from django.utils.http import urlsafe_base64_encode
-            from django.utils.encoding import force_bytes
-            setup_url = request.build_absolute_uri(f"/password/reset/{urlsafe_base64_encode(force_bytes(user.pk))}/{default_token_generator.make_token(user)}/")
-            sent = send_mail("Set up your Orionex member account", f"Hello {first},\n\nYour member account is ready. Set your password using this one-time link:\n{setup_url}\n", None, [email], fail_silently=True)
-            created = {
-                "name": f"{first} {last}".strip(),
-                "email": email,
-                "sent": sent,
-                "setup_url": setup_url,
-                "console_email": "console.EmailBackend" in settings.EMAIL_BACKEND,
-            }
-            values = {"first_name": "", "last_name": "", "email": "", "phone": ""}
+            try:
+                if initial_password:
+                    validate_password(initial_password)
+            except ValidationError as exc:
+                error = " ".join(exc.messages)
+            if not error:
+                user = User.objects.create_user(
+                    username=email,
+                    email=email,
+                    password=initial_password or secrets.token_urlsafe(32),
+                    first_name=first,
+                    last_name=last,
+                )
+                Member.objects.create(user=user, phone=phone)
+                setup_url = None
+                sent = 0
+                if not initial_password:
+                    from django.contrib.auth.tokens import default_token_generator
+                    from django.utils.http import urlsafe_base64_encode
+                    from django.utils.encoding import force_bytes
+                    setup_url = request.build_absolute_uri(f"/password/reset/{urlsafe_base64_encode(force_bytes(user.pk))}/{default_token_generator.make_token(user)}/")
+                    sent = send_mail("Set up your Orionex member account", f"Hello {first},\n\nYour member account is ready. Set your password using this one-time link:\n{setup_url}\n", None, [email], fail_silently=True)
+                created = {
+                    "name": f"{first} {last}".strip(),
+                    "email": email,
+                    "sent": sent,
+                    "setup_url": setup_url,
+                    "password_set": bool(initial_password),
+                    "console_email": "console.EmailBackend" in settings.EMAIL_BACKEND,
+                }
+                values = {"first_name": "", "last_name": "", "email": "", "phone": ""}
 
     return render(
         request,
